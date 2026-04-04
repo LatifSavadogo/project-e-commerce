@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/v1")
 public class PaysController {
@@ -43,6 +43,7 @@ public class PaysController {
                 .collect(Collectors.toList());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PostMapping("/pays")
     public ResponseEntity<PaysDTO> createPays(@Valid @RequestBody PaysDTO paysDTO) {
 //    	String currentUsername = authService.getCurrentUsername();
@@ -65,6 +66,7 @@ public class PaysController {
         return ResponseEntity.ok(PaysDTO.fromEntity(pays));
     }
     
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PutMapping("/pays/{idpays}")
     public ResponseEntity<PaysDTO> updateRole(@PathVariable Integer idpays, 
                                              @Valid @RequestBody PaysDTO paysDTO) {
@@ -84,6 +86,7 @@ public class PaysController {
     }
 
     //  5. Supprimer un pays
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @DeleteMapping("/pays/{idpays}")
     public ResponseEntity<?> deletePays(@PathVariable Integer idpays) {
     	Pays pays = paysRepository.findById(idpays)

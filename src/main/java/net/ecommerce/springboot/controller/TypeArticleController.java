@@ -1,8 +1,8 @@
 package net.ecommerce.springboot.controller;
-import com.asn.springboot.exception.ResourceNotFoundException;
 
 import jakarta.validation.Valid;
 import net.ecommerce.springboot.dto.TypeArticleDTO;
+import net.ecommerce.springboot.exception.ResourceNotFoundException;
 import net.ecommerce.springboot.model.FamilleArticle;
 import net.ecommerce.springboot.model.TypeArticle;
 import net.ecommerce.springboot.repository.FamilleArticleRepository;
@@ -11,6 +11,7 @@ import net.ecommerce.springboot.repository.TypeArticleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -18,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/v1/")
 public class TypeArticleController {
@@ -45,6 +45,7 @@ public class TypeArticleController {
         return ResponseEntity.ok(TypeArticleDTO.fromEntity(typeArticle));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PostMapping("/typeArticles")
     public ResponseEntity<TypeArticleDTO> createTypeArticle(@Valid @RequestBody TypeArticleDTO typeArticleDTO) {
         TypeArticle typeArticle = new TypeArticle();
@@ -63,6 +64,7 @@ public class TypeArticleController {
         return ResponseEntity.status(HttpStatus.CREATED).body(TypeArticleDTO.fromEntity(savedTypeArticle));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PutMapping("/typeArticles/{idtype}")
     public ResponseEntity<TypeArticleDTO> updateTypeArticleById(@PathVariable Integer idtype,
             @Valid @RequestBody TypeArticleDTO typeArticleDTO) {
@@ -88,6 +90,7 @@ public class TypeArticleController {
         return ResponseEntity.ok(TypeArticleDTO.fromEntity(updateTypeArticle));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @DeleteMapping("/typeArticles/{idtype}")
     public ResponseEntity<Map<String, Boolean>> deleteTypeArticle(@PathVariable Integer idtype) {
     	TypeArticle typeArticle = typeArticleRepository.findById(idtype)

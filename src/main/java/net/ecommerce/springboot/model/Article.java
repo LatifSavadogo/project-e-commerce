@@ -42,6 +42,19 @@ public class Article {
 	@ManyToOne
 	@JoinColumn(name = "idtype", nullable = true)
 	private TypeArticle typeArticle;
+
+	@ManyToOne
+	@JoinColumn(name = "iduser_vendeur", nullable = true)
+	private User vendeur;
+
+	@Column(nullable = false)
+	private boolean blocked = false;
+
+	@Column(length = 500)
+	private String warningMessage;
+
+	@Column(nullable = false)
+	private int viewCount = 0;
 	
 	@PrePersist
     public void prePersist() {
@@ -128,6 +141,37 @@ public class Article {
 	public void setDateupdate(LocalDateTime dateupdate) {
 		this.dateupdate = dateupdate;
 	}
-	
+
+	public User getVendeur() {
+		return vendeur;
+	}
+
+	public void setVendeur(User vendeur) {
+		this.vendeur = vendeur;
+	}
+
+	public boolean isBlocked() {
+		return blocked;
+	}
+
+	public void setBlocked(boolean blocked) {
+		this.blocked = blocked;
+	}
+
+	public String getWarningMessage() {
+		return warningMessage;
+	}
+
+	public void setWarningMessage(String warningMessage) {
+		this.warningMessage = warningMessage;
+	}
+
+	public int getViewCount() {
+		return viewCount;
+	}
+
+	public void setViewCount(int viewCount) {
+		this.viewCount = viewCount;
+	}
 
 }

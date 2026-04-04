@@ -1,9 +1,14 @@
 package net.ecommerce.springboot.dto;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import java.time.LocalDateTime;
+
+import net.ecommerce.springboot.model.ArticleImage;
 
 public class ArticleDTO {
     
@@ -27,6 +32,16 @@ public class ArticleDTO {
     private Integer idtype;
     private String typearticle; // nom du type
     private String desctype; // description du type
+
+    private Integer idVendeur;
+    private String vendeurNom;
+    private String vendeurPrenom;
+    private boolean blocked;
+    private String warningMessage;
+    private int viewCount;
+
+    /** Fichiers image (noms stockés), ordre d’affichage ; la première = photo principale. */
+    private List<String> photos = new ArrayList<>();
     
     public ArticleDTO() {}
     
@@ -41,20 +56,45 @@ public class ArticleDTO {
     }
     
     public static ArticleDTO fromEntity(net.ecommerce.springboot.model.Article article) {
+        return fromEntity(article, List.of());
+    }
+
+    public static ArticleDTO fromEntity(net.ecommerce.springboot.model.Article article, List<ArticleImage> images) {
         ArticleDTO dto = new ArticleDTO();
         dto.setIdarticle(article.getIdarticle());
         dto.setLibarticle(article.getLibarticle());
-        dto.setPhoto(article.getPhoto());
         dto.setDescarticle(article.getDescarticle());
         dto.setPrixunitaire(article.getPrixunitaire());
         dto.setDateupdate(article.getDateupdate());
         dto.setUserupdate(article.getUserupdate());
-        
-        // Gestion du type d'article
+
+        List<String> photoList = new ArrayList<>();
+        if (images != null && !images.isEmpty()) {
+            for (ArticleImage img : images) {
+                photoList.add(img.getUrl());
+            }
+            dto.setPhoto(photoList.get(0));
+        } else if (article.getPhoto() != null && !article.getPhoto().isBlank()) {
+            dto.setPhoto(article.getPhoto());
+            photoList.add(article.getPhoto());
+        } else {
+            dto.setPhoto(null);
+        }
+        dto.setPhotos(photoList);
+
         if (article.getTypeArticle() != null) {
             dto.setIdtype(article.getTypeArticle().getIdtype());
             dto.setTypearticle(article.getTypeArticle().getLibtype());
+            dto.setDesctype(article.getTypeArticle().getDesctype());
         }
+        if (article.getVendeur() != null) {
+            dto.setIdVendeur(article.getVendeur().getIduser());
+            dto.setVendeurNom(article.getVendeur().getNom());
+            dto.setVendeurPrenom(article.getVendeur().getPrenom());
+        }
+        dto.setBlocked(article.isBlocked());
+        dto.setWarningMessage(article.getWarningMessage());
+        dto.setViewCount(article.getViewCount());
         return dto;
     }
     
@@ -150,5 +190,61 @@ public class ArticleDTO {
 
     public void setDesctype(String desctype) {
         this.desctype = desctype;
+    }
+
+    public Integer getIdVendeur() {
+        return idVendeur;
+    }
+
+    public void setIdVendeur(Integer idVendeur) {
+        this.idVendeur = idVendeur;
+    }
+
+    public String getVendeurNom() {
+        return vendeurNom;
+    }
+
+    public void setVendeurNom(String vendeurNom) {
+        this.vendeurNom = vendeurNom;
+    }
+
+    public String getVendeurPrenom() {
+        return vendeurPrenom;
+    }
+
+    public void setVendeurPrenom(String vendeurPrenom) {
+        this.vendeurPrenom = vendeurPrenom;
+    }
+
+    public boolean isBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        this.blocked = blocked;
+    }
+
+    public String getWarningMessage() {
+        return warningMessage;
+    }
+
+    public void setWarningMessage(String warningMessage) {
+        this.warningMessage = warningMessage;
+    }
+
+    public int getViewCount() {
+        return viewCount;
+    }
+
+    public void setViewCount(int viewCount) {
+        this.viewCount = viewCount;
+    }
+
+    public List<String> getPhotos() {
+        return photos;
+    }
+
+    public void setPhotos(List<String> photos) {
+        this.photos = photos != null ? photos : new ArrayList<>();
     }
 }

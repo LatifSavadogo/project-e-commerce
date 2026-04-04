@@ -8,9 +8,9 @@ import java.util.List;
 
 public interface ArticleImageRepository extends JpaRepository<ArticleImage, Integer> {
 
-    List<ArticleImage> findByProductIdProductOrderBySortOrderAsc(Integer idArticle);
+	List<ArticleImage> findByArticle_IdarticleOrderBySortOrderAsc(Integer idarticle);
 
-    long countByArticleIdArticle(Integer idArticle);
+	long countByArticle_Idarticle(Integer idarticle);
 
-    void deleteByArticleIdArticle(Integer idArticle);
+	void deleteByArticle_Idarticle(Integer idarticle);
 }

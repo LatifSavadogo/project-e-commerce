@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -43,6 +45,19 @@ public class User {
 	@ManyToOne
 	@JoinColumn(name="idpays")
 	private Pays pays;
+
+	@Column(name = "ville", length = 120)
+	private String ville;
+
+	/** Catégorie (type d'article) choisie à l'inscription pour les vendeurs ; null pour les autres rôles. */
+	@ManyToOne
+	@JoinColumn(name = "idtype_vendeur", nullable = true)
+	private TypeArticle categorieVendeur;
+
+	/** Moto ou véhicule : renseigné pour les comptes livreur (profil par défaut). */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "type_engin_livreur", length = 16)
+	private TypeEnginLivreur typeEnginLivreur;
 	
 	@Column(name = "userupdate", nullable = false)
     private String userupdate;
@@ -128,6 +143,30 @@ public class User {
     public void setPays(Pays pays) {
     	this.pays=pays;
     }
+
+	public String getVille() {
+		return ville;
+	}
+
+	public void setVille(String ville) {
+		this.ville = ville;
+	}
+
+	public TypeArticle getCategorieVendeur() {
+		return categorieVendeur;
+	}
+
+	public void setCategorieVendeur(TypeArticle categorieVendeur) {
+		this.categorieVendeur = categorieVendeur;
+	}
+
+	public TypeEnginLivreur getTypeEnginLivreur() {
+		return typeEnginLivreur;
+	}
+
+	public void setTypeEnginLivreur(TypeEnginLivreur typeEnginLivreur) {
+		this.typeEnginLivreur = typeEnginLivreur;
+	}
     
     public String getUserupdate() {
     	return userupdate;

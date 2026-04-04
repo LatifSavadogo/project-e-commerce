@@ -17,5 +17,7 @@ boolean existsByEmail(String email);
     List<User> findByNomContainingIgnoreCase(String nom);
     
     Optional<User> findByEmail(String email);
+
+	Optional<User> findByEmailIgnoreCase(String email);
     
 }

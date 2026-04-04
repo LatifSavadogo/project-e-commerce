@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -19,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/v1")
 public class RoleController {
@@ -40,6 +40,7 @@ public class RoleController {
                 .collect(Collectors.toList());
     }
 
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping("/roles")
     public ResponseEntity<RoleDTO> createRole(@Valid @RequestBody RoleDTO roleDTO) {
 //    	String currentUsername = authService.getCurrentUsername();
@@ -62,6 +63,7 @@ public class RoleController {
         return ResponseEntity.ok(RoleDTO.fromEntity(role));
     }
     
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PutMapping("/roles/{idrole}")
     public ResponseEntity<RoleDTO> updateRole(@PathVariable Integer idrole, 
                                              @Valid @RequestBody RoleDTO roleDTO) {
@@ -81,6 +83,7 @@ public class RoleController {
     }
 
     //  5. Supprimer un rôle
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @DeleteMapping("/roles/{idrole}")
     public ResponseEntity<?> deleteRole(@PathVariable Integer idrole) {
         Role role = roleRepository.findById(idrole)
@@ -103,6 +106,7 @@ public class RoleController {
     }
 
     //  6. Récupérer les utilisateurs d'un rôle
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @GetMapping("/roles/{idrole}/utilisateurs")
     public ResponseEntity<?> getUtilisateursByRole(@PathVariable Integer idrole) {
         Role role = roleRepository.findById(idrole)

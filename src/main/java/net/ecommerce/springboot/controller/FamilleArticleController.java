@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/v1")
 public class FamilleArticleController {
@@ -40,6 +40,7 @@ public class FamilleArticleController {
 				.collect(Collectors.toList());
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 	@PostMapping("/familleArticles")
 	public ResponseEntity<FamilleArticleDTO> createFamilleArticle(
 			@Valid @RequestBody FamilleArticleDTO familleArticleDTO) {
@@ -63,6 +64,7 @@ public class FamilleArticleController {
 		return ResponseEntity.ok(FamilleArticleDTO.fromEntity(familleArticle));
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 	@PutMapping("/familleArticles/{idfamille}")
 	public ResponseEntity<FamilleArticleDTO> updateRole(@PathVariable Integer idfamille, @Valid @RequestBody FamilleArticleDTO familleArticleDTO) {
 //    	String currentUsername = authService.getCurrentUsername();
@@ -81,6 +83,7 @@ public class FamilleArticleController {
 	}
 
 	// 5. Supprimer une famille d'Article
+	@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 	@DeleteMapping("/familleArticles/{idfamille}")
 	public ResponseEntity<?> deleteRole(@PathVariable Integer idfamille) {
 		FamilleArticle familleArticle = familleArticleRepository.findById(idfamille)

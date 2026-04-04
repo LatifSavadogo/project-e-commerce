@@ -46,6 +46,15 @@ private Integer iduser;
     private Integer idpays;
     
     private String libpays;
+
+    private String ville;
+
+    /** Type d'article autorisé pour un vendeur (null si acheteur / admin). */
+    private Integer idtypeVendeur;
+    private String libtypeVendeur;
+
+    /** MOTO ou VEHICULE pour les livreurs. */
+    private String typeEnginLivreur;
     
     
     // Constructeurs
@@ -81,6 +90,14 @@ private Integer iduser;
         if (user.getPays() != null) {
             dto.setIdpays(user.getPays().getIdpays());
             dto.setLibpays(user.getPays().getLibpays());
+        }
+        dto.setVille(user.getVille());
+        if (user.getCategorieVendeur() != null) {
+            dto.setIdtypeVendeur(user.getCategorieVendeur().getIdtype());
+            dto.setLibtypeVendeur(user.getCategorieVendeur().getLibtype());
+        }
+        if (user.getTypeEnginLivreur() != null) {
+            dto.setTypeEnginLivreur(user.getTypeEnginLivreur().name());
         }
         
         return dto;
@@ -124,5 +141,17 @@ private Integer iduser;
     
     public String getLibpays() { return libpays; }
     public void setLibpays(String libpays) { this.libpays = libpays; }
+
+    public String getVille() { return ville; }
+    public void setVille(String ville) { this.ville = ville; }
+
+    public Integer getIdtypeVendeur() { return idtypeVendeur; }
+    public void setIdtypeVendeur(Integer idtypeVendeur) { this.idtypeVendeur = idtypeVendeur; }
+
+    public String getLibtypeVendeur() { return libtypeVendeur; }
+    public void setLibtypeVendeur(String libtypeVendeur) { this.libtypeVendeur = libtypeVendeur; }
+
+    public String getTypeEnginLivreur() { return typeEnginLivreur; }
+    public void setTypeEnginLivreur(String typeEnginLivreur) { this.typeEnginLivreur = typeEnginLivreur; }
   
 }
