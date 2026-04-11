@@ -42,15 +42,12 @@ import net.ecommerce.springboot.dto.UserDTO;
 import net.ecommerce.springboot.exception.ResourceNotFoundException;
 import net.ecommerce.springboot.model.Pays;
 import net.ecommerce.springboot.model.Role;
-import net.ecommerce.springboot.model.TypeArticle;
 import net.ecommerce.springboot.model.User;
 import net.ecommerce.springboot.repository.PaysRepository;
 import net.ecommerce.springboot.repository.RoleRepository;
-import net.ecommerce.springboot.repository.TypeArticleRepository;
 import net.ecommerce.springboot.repository.UserRepository;
 import net.ecommerce.springboot.security.RoleNames;
 import net.ecommerce.springboot.service.AuthService;
-import net.ecommerce.springboot.service.LivraisonService;
 import net.ecommerce.springboot.service.PasswordResetService;
 import net.ecommerce.springboot.service.UserService;
 
@@ -69,19 +66,17 @@ public class AuthController {
 	private final UserRepository userRepository;
 	private final RoleRepository roleRepository;
 	private final PaysRepository paysRepository;
-	private final TypeArticleRepository typeArticleRepository;
 	private final UserService userService;
 	private final AuthService authService;
 	private final PasswordResetService passwordResetService;
 
 	public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository,
-			RoleRepository roleRepository, PaysRepository paysRepository, TypeArticleRepository typeArticleRepository,
+			RoleRepository roleRepository, PaysRepository paysRepository,
 			UserService userService, AuthService authService, PasswordResetService passwordResetService) {
 		this.authenticationManager = authenticationManager;
 		this.userRepository = userRepository;
 		this.roleRepository = roleRepository;
 		this.paysRepository = paysRepository;
-		this.typeArticleRepository = typeArticleRepository;
 		this.userService = userService;
 		this.authService = authService;
 		this.passwordResetService = passwordResetService;
@@ -116,48 +111,32 @@ public class AuthController {
 
 	@PostMapping(value = "/register", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<?> register(@RequestParam String nom, @RequestParam String prenom,
-			@RequestParam String email, @RequestParam String password, @RequestParam Integer idrole,
+			@RequestParam String email, @RequestParam String password,
 			@RequestParam(required = false) Integer idpays,
 			@RequestParam(required = false) String ville,
-			@RequestParam(required = false) Integer idtypeVendeur,
-			@RequestParam(required = false) String typeEnginLivreur,
-			@RequestParam("cnib") MultipartFile cnibFile) {
+			@RequestParam(value = "cnib", required = false) MultipartFile cnibFile) {
 		try {
 			if (userRepository.existsByEmail(email.trim())) {
 				return ResponseEntity.badRequest().body(Map.of("error", "Cet email est déjà utilisé."));
 			}
-			Role role = roleRepository.findById(idrole)
-					.orElseThrow(() -> new ResourceNotFoundException("Rôle non trouvé : " + idrole));
-			String lib = role.getLibrole();
-			if (!RoleNames.ACHETEUR.equalsIgnoreCase(lib) && !RoleNames.VENDEUR.equalsIgnoreCase(lib)
-					&& !RoleNames.LIVREUR.equalsIgnoreCase(lib)) {
-				return ResponseEntity.badRequest()
-						.body(Map.of("error", "Inscription réservée aux rôles ACHETEUR, VENDEUR ou LIVREUR."));
+			Role role = roleRepository.findByLibroleIgnoreCase(RoleNames.ACHETEUR)
+					.orElseThrow(() -> new ResourceNotFoundException("Rôle acheteur introuvable en base."));
+
+			String fileName = null;
+			if (cnibFile != null && !cnibFile.isEmpty()) {
+				if (cnibFile.getSize() > MAX_FILE_SIZE) {
+					return ResponseEntity.badRequest().body(Map.of("error", "Fichier trop volumineux (max 5 Mo)."));
+				}
+				String originalFileName = cnibFile.getOriginalFilename();
+				String ext = getFileExtension(originalFileName);
+				if (!ALLOWED_EXTENSIONS.contains(ext.toLowerCase())) {
+					return ResponseEntity.badRequest().body(Map.of("error", "Extension non autorisée."));
+				}
+				fileName = generateUniqueFileName(originalFileName, ext);
+				Path dest = Paths.get(UPLOAD_DIR, fileName);
+				Files.createDirectories(dest.getParent());
+				Files.copy(cnibFile.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
 			}
-			if (RoleNames.VENDEUR.equalsIgnoreCase(lib) && idtypeVendeur == null) {
-				return ResponseEntity.badRequest()
-						.body(Map.of("error", "Le vendeur doit choisir une catégorie (idtypeVendeur)."));
-			}
-			if (RoleNames.LIVREUR.equalsIgnoreCase(lib)
-					&& (typeEnginLivreur == null || typeEnginLivreur.isBlank())) {
-				return ResponseEntity.badRequest()
-						.body(Map.of("error", "Le livreur doit indiquer typeEnginLivreur (MOTO ou VEHICULE)."));
-			}
-			if (cnibFile.isEmpty()) {
-				return ResponseEntity.badRequest().body(Map.of("error", "La CNI / pièce est requise."));
-			}
-			if (cnibFile.getSize() > MAX_FILE_SIZE) {
-				return ResponseEntity.badRequest().body(Map.of("error", "Fichier trop volumineux (max 5 Mo)."));
-			}
-			String originalFileName = cnibFile.getOriginalFilename();
-			String ext = getFileExtension(originalFileName);
-			if (!ALLOWED_EXTENSIONS.contains(ext.toLowerCase())) {
-				return ResponseEntity.badRequest().body(Map.of("error", "Extension non autorisée."));
-			}
-			String fileName = generateUniqueFileName(originalFileName, ext);
-			Path dest = Paths.get(UPLOAD_DIR, fileName);
-			Files.createDirectories(dest.getParent());
-			Files.copy(cnibFile.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
 
 			User user = new User();
 			user.setNom(nom);
@@ -168,6 +147,7 @@ public class AuthController {
 			user.setRole(role);
 			user.setUserupdate("register");
 			user.setDateupdate(LocalDateTime.now());
+			user.setTypeEnginLivreur(null);
 			if (idpays != null) {
 				Pays pays = paysRepository.findById(idpays)
 						.orElseThrow(() -> new ResourceNotFoundException("Pays introuvable : " + idpays));
@@ -175,21 +155,6 @@ public class AuthController {
 			}
 			if (ville != null && !ville.isBlank()) {
 				user.setVille(ville.trim());
-			}
-			if (RoleNames.VENDEUR.equalsIgnoreCase(lib)) {
-				TypeArticle cat = typeArticleRepository.findById(idtypeVendeur).orElseThrow(
-						() -> new ResourceNotFoundException("Type d'article introuvable : " + idtypeVendeur));
-				user.setCategorieVendeur(cat);
-			}
-			if (RoleNames.LIVREUR.equalsIgnoreCase(lib)) {
-				try {
-					user.setTypeEnginLivreur(LivraisonService.parseTypeEngin(typeEnginLivreur));
-				} catch (IllegalArgumentException ex) {
-					return ResponseEntity.badRequest()
-							.body(Map.of("error", "typeEnginLivreur invalide (attendu : MOTO ou VEHICULE)."));
-				}
-			} else {
-				user.setTypeEnginLivreur(null);
 			}
 			User saved = userService.saveWithEncodedPassword(user);
 			return ResponseEntity.status(HttpStatus.CREATED).body(UserDTO.fromEntity(saved));

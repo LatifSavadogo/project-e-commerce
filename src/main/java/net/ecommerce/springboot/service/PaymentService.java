@@ -23,6 +23,8 @@ import net.ecommerce.springboot.model.User;
 import net.ecommerce.springboot.repository.ArticleRepository;
 import net.ecommerce.springboot.repository.ChatMessageRepository;
 import net.ecommerce.springboot.repository.EcomTransactionRepository;
+import net.ecommerce.springboot.repository.UserRepository;
+import net.ecommerce.springboot.util.GeoCoordinates;
 
 @Service
 public class PaymentService {
@@ -30,15 +32,17 @@ public class PaymentService {
 	private final EcomTransactionRepository transactionRepository;
 	private final ArticleRepository articleRepository;
 	private final ChatMessageRepository chatMessageRepository;
+	private final UserRepository userRepository;
 	private final TransactionReferenceCrypto referenceCrypto;
 	private final LivraisonService livraisonService;
 
 	public PaymentService(EcomTransactionRepository transactionRepository, ArticleRepository articleRepository,
-			ChatMessageRepository chatMessageRepository, TransactionReferenceCrypto referenceCrypto,
-			LivraisonService livraisonService) {
+			ChatMessageRepository chatMessageRepository, UserRepository userRepository,
+			TransactionReferenceCrypto referenceCrypto, LivraisonService livraisonService) {
 		this.transactionRepository = transactionRepository;
 		this.articleRepository = articleRepository;
 		this.chatMessageRepository = chatMessageRepository;
+		this.userRepository = userRepository;
 		this.referenceCrypto = referenceCrypto;
 		this.livraisonService = livraisonService;
 	}
@@ -46,15 +50,23 @@ public class PaymentService {
 	@Transactional
 	public EcomTransaction enregistrerPaiement(User acheteur, Integer idArticle, int quantite,
 			PaymentMethod moyen, String referenceExterne, Integer prixUnitaireNegocie) {
-		return enregistrerPaiement(acheteur, idArticle, quantite, moyen, referenceExterne, prixUnitaireNegocie, null);
+		return enregistrerPaiement(acheteur, idArticle, quantite, moyen, referenceExterne, prixUnitaireNegocie, null,
+				null, null);
 	}
 
 	/**
 	 * @param negotiationMessageId si non null (ligne panier liée à un message), le paiement doit correspondre à ce message d’accord.
+	 * @param livraisonLatitude / livraisonLongitude optionnels : point de dépôt pour cette commande (sinon domicile du profil).
 	 */
 	@Transactional
 	public EcomTransaction enregistrerPaiement(User acheteur, Integer idArticle, int quantite,
-			PaymentMethod moyen, String referenceExterne, Integer prixUnitaireNegocie, Integer negotiationMessageId) {
+			PaymentMethod moyen, String referenceExterne, Integer prixUnitaireNegocie, Integer negotiationMessageId,
+			Double livraisonLatitude, Double livraisonLongitude) {
+		User buyer = userRepository.findById(acheteur.getIduser())
+				.orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable : " + acheteur.getIduser()));
+		GeoCoordinates.requireLatLng(buyer.getLatitude(), buyer.getLongitude(),
+				"Renseignez d’abord les coordonnées GPS de votre domicile (Mon compte) avant de payer.");
+
 		String refNorm = referenceExterne.trim();
 		if (refNorm.isEmpty()) {
 			throw new IllegalArgumentException("La référence de transaction est obligatoire.");
@@ -71,7 +83,7 @@ public class PaymentService {
 		if (article.getVendeur() == null) {
 			throw new IllegalStateException("Article sans vendeur associé.");
 		}
-		if (article.getVendeur().getIduser().equals(acheteur.getIduser())) {
+		if (article.getVendeur().getIduser().equals(buyer.getIduser())) {
 			throw new IllegalStateException("Vous ne pouvez pas payer pour votre propre annonce.");
 		}
 		int unit = article.getPrixunitaire();
@@ -80,7 +92,7 @@ public class PaymentService {
 				throw new IllegalStateException("Le prix négocié ne peut pas dépasser le prix catalogue.");
 			}
 			long ok = chatMessageRepository.countPayableNegotiatedPrice(prixUnitaireNegocie, idArticle,
-					acheteur.getIduser(), article.getVendeur().getIduser(), quantite, negotiationMessageId);
+					buyer.getIduser(), article.getVendeur().getIduser(), quantite, negotiationMessageId);
 			if (ok < 1) {
 				throw new IllegalStateException(
 						"Aucun accord à ce prix et à cette quantité (offre acceptée ou dernier prix vendeur) pour cet article.");
@@ -95,7 +107,7 @@ public class PaymentService {
 		int frais = fraisPourMoyen(moyen);
 
 		EcomTransaction t = new EcomTransaction();
-		t.setAcheteur(acheteur);
+		t.setAcheteur(buyer);
 		t.setVendeur(article.getVendeur());
 		t.setArticle(article);
 		t.setQuantite(quantite);
@@ -105,9 +117,23 @@ public class PaymentService {
 		t.setMoyenPaiement(moyen);
 		t.setRefExterneHash(hash);
 		t.setRefExterneCryptee(referenceCrypto.encrypt(refNorm));
+		applyLivraisonPointCommande(t, livraisonLatitude, livraisonLongitude);
 		EcomTransaction saved = transactionRepository.save(t);
 		livraisonService.createPendingForTransaction(saved);
 		return saved;
+	}
+
+	private static void applyLivraisonPointCommande(EcomTransaction t, Double lat, Double lon) {
+		if (lat == null && lon == null) {
+			return;
+		}
+		if (lat == null || lon == null) {
+			throw new IllegalArgumentException(
+					"Pour livrer à un autre lieu que le domicile, indiquez la latitude et la longitude (point choisi sur la carte).");
+		}
+		GeoCoordinates.assertValidRange(lat, lon);
+		t.setLivraisonLatitude(lat);
+		t.setLivraisonLongitude(lon);
 	}
 
 	private static int fraisPourMoyen(PaymentMethod m) {
@@ -124,13 +150,13 @@ public class PaymentService {
 
 	public List<PaymentResultDTO> listByBuyer(Integer iduser) {
 		return transactionRepository.findByAcheteur_IduserOrderByDatecreationDesc(iduser).stream()
-				.map(PaymentResultDTO::fromEntity)
+				.map(t -> PaymentResultDTO.fromEntity(t, false))
 				.toList();
 	}
 
 	public List<PaymentResultDTO> listBySeller(Integer iduser) {
 		return transactionRepository.findByVendeur_IduserOrderByDatecreationDesc(iduser).stream()
-				.map(PaymentResultDTO::fromEntity)
+				.map(t -> PaymentResultDTO.fromEntity(t, true))
 				.toList();
 	}
 
@@ -240,7 +266,7 @@ public class PaymentService {
 	/** Liste complète pour le staff (admin / super-admin). */
 	public List<PaymentResultDTO> listAllForStaff() {
 		return transactionRepository.findAllByOrderByDatecreationDesc().stream()
-				.map(PaymentResultDTO::fromEntity)
+				.map(t -> PaymentResultDTO.fromEntity(t, true))
 				.toList();
 	}
 

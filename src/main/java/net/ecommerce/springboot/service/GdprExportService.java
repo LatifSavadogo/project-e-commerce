@@ -94,6 +94,13 @@ public class GdprExportService {
 			m.put("typeEnginLivreur", u.getTypeEnginLivreur().name());
 		}
 		m.put("fichierPieceIdentite", u.getCnib());
+		m.put("fichierPhotoProfil", u.getPhotoProfil());
+		if (u.getLatitude() != null) {
+			m.put("latitude", u.getLatitude());
+		}
+		if (u.getLongitude() != null) {
+			m.put("longitude", u.getLongitude());
+		}
 		m.put("dateMiseAJour", u.getDateupdate() != null ? u.getDateupdate().toString() : null);
 		return m;
 	}

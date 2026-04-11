@@ -10,7 +10,7 @@ public class LivreurDashboardDTO {
 	private long livraisonsLivreesMoto;
 	private long livraisonsLivreesVehicule;
 	private String enginProfil;
-	private List<LivraisonDTO> dernieresCourses = new ArrayList<>();
+	private List<LivraisonLivreurDTO> dernieresCourses = new ArrayList<>();
 
 	public long getLivraisonsEnCours() {
 		return livraisonsEnCours;
@@ -52,11 +52,11 @@ public class LivreurDashboardDTO {
 		this.enginProfil = enginProfil;
 	}
 
-	public List<LivraisonDTO> getDernieresCourses() {
+	public List<LivraisonLivreurDTO> getDernieresCourses() {
 		return dernieresCourses;
 	}
 
-	public void setDernieresCourses(List<LivraisonDTO> dernieresCourses) {
+	public void setDernieresCourses(List<LivraisonLivreurDTO> dernieresCourses) {
 		this.dernieresCourses = dernieresCourses;
 	}
 }

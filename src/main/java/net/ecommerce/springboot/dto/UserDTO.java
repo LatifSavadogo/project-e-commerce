@@ -55,6 +55,12 @@ private Integer iduser;
 
     /** MOTO ou VEHICULE pour les livreurs. */
     private String typeEnginLivreur;
+
+    private String photoProfil;
+
+    private Double latitude;
+
+    private Double longitude;
     
     
     // Constructeurs
@@ -77,6 +83,9 @@ private Integer iduser;
         dto.setPrenom(user.getPrenom());
         dto.setEmail(user.getEmail());
         dto.setCnib(user.getCnib());
+        dto.setPhotoProfil(user.getPhotoProfil());
+        dto.setLatitude(user.getLatitude());
+        dto.setLongitude(user.getLongitude());
         // On ne retourne pas le mot de passe pour des raisons de sécurité
         dto.setUserupdate(user.getUserupdate());
         dto.setDateupdate(user.getDateupdate());
@@ -153,5 +162,14 @@ private Integer iduser;
 
     public String getTypeEnginLivreur() { return typeEnginLivreur; }
     public void setTypeEnginLivreur(String typeEnginLivreur) { this.typeEnginLivreur = typeEnginLivreur; }
+
+    public String getPhotoProfil() { return photoProfil; }
+    public void setPhotoProfil(String photoProfil) { this.photoProfil = photoProfil; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
   
 }

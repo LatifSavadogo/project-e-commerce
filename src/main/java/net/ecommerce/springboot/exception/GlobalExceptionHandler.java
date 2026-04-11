@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -62,6 +63,13 @@ public class GlobalExceptionHandler {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", msg, "code", "UNAUTHORIZED"));
 		}
 		return ResponseEntity.badRequest().body(Map.of("error", msg, "code", "BUSINESS_RULE"));
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException ex) {
+		String msg = ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage()
+				: "Accès refusé pour ce rôle ou cette ressource";
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", msg, "code", "FORBIDDEN"));
 	}
 
 	@ExceptionHandler(ResourceNotFoundException.class)

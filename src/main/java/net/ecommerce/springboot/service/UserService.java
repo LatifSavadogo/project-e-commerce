@@ -17,11 +17,13 @@ import net.ecommerce.springboot.repository.ComplaintRepository;
 import net.ecommerce.springboot.repository.ConversationRepository;
 import net.ecommerce.springboot.repository.EcomTransactionRepository;
 import net.ecommerce.springboot.repository.LivraisonRepository;
+import net.ecommerce.springboot.repository.LivreurLivraisonIgnoreRepository;
 import net.ecommerce.springboot.repository.PaysRepository;
 import net.ecommerce.springboot.repository.RoleRepository;
 import net.ecommerce.springboot.repository.TypeArticleRepository;
 import net.ecommerce.springboot.repository.UserRepository;
 import net.ecommerce.springboot.security.RoleNames;
+import net.ecommerce.springboot.util.GeoCoordinates;
 
 @Service
 public class UserService {
@@ -33,6 +35,7 @@ public class UserService {
 	private final ComplaintRepository complaintRepository;
 	private final EcomTransactionRepository ecomTransactionRepository;
 	private final LivraisonRepository livraisonRepository;
+	private final LivreurLivraisonIgnoreRepository livreurLivraisonIgnoreRepository;
 	private final RoleRepository roleRepository;
 	private final PaysRepository paysRepository;
 	private final TypeArticleRepository typeArticleRepository;
@@ -41,7 +44,8 @@ public class UserService {
 	public UserService(UserRepository userRepository, ArticleRepository articleRepository,
 			ConversationRepository conversationRepository, ChatMessageRepository chatMessageRepository,
 			ComplaintRepository complaintRepository, EcomTransactionRepository ecomTransactionRepository,
-			LivraisonRepository livraisonRepository, RoleRepository roleRepository, PaysRepository paysRepository,
+			LivraisonRepository livraisonRepository, LivreurLivraisonIgnoreRepository livreurLivraisonIgnoreRepository,
+			RoleRepository roleRepository, PaysRepository paysRepository,
 			TypeArticleRepository typeArticleRepository, PasswordEncoder passwordEncoder) {
 		this.userRepository = userRepository;
 		this.articleRepository = articleRepository;
@@ -50,6 +54,7 @@ public class UserService {
 		this.complaintRepository = complaintRepository;
 		this.ecomTransactionRepository = ecomTransactionRepository;
 		this.livraisonRepository = livraisonRepository;
+		this.livreurLivraisonIgnoreRepository = livreurLivraisonIgnoreRepository;
 		this.roleRepository = roleRepository;
 		this.paysRepository = paysRepository;
 		this.typeArticleRepository = typeArticleRepository;
@@ -122,9 +127,31 @@ public class UserService {
 				throw new IllegalStateException("typeEnginLivreur invalide (MOTO ou VEHICULE).");
 			}
 		}
+		if (dto.getLatitude() != null) {
+			target.setLatitude(dto.getLatitude());
+		}
+		if (dto.getLongitude() != null) {
+			target.setLongitude(dto.getLongitude());
+		}
+		if (target.getRole() != null && RoleNames.VENDEUR.equalsIgnoreCase(target.getRole().getLibrole())) {
+			GeoCoordinates.requireLatLng(target.getLatitude(), target.getLongitude(),
+					"Un vendeur doit avoir une latitude et une longitude (point de vente / retrait).");
+		}
 		target.setUserupdate(admin.getEmail());
 		target.setDateupdate(LocalDateTime.now());
 		return userRepository.save(target);
+	}
+
+	@Transactional
+	public User updateMyDeliveryLocation(User self, double latitude, double longitude) {
+		GeoCoordinates.assertValidRange(latitude, longitude);
+		User u = userRepository.findById(self.getIduser())
+				.orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable : " + self.getIduser()));
+		u.setLatitude(latitude);
+		u.setLongitude(longitude);
+		u.setUserupdate(self.getEmail());
+		u.setDateupdate(LocalDateTime.now());
+		return userRepository.save(u);
 	}
 
 	@Transactional
@@ -152,6 +179,8 @@ public class UserService {
 		}
 		complaintRepository.deleteByAuteur_Iduser(targetId);
 		complaintRepository.deleteByArticle_Vendeur_Iduser(targetId);
+		livreurLivraisonIgnoreRepository.deleteForLivraisonsOfUserTransactions(targetId);
+		livreurLivraisonIgnoreRepository.deleteByLivreur_Iduser(targetId);
 		livraisonRepository.deleteByTransactionInvolvingUser(targetId);
 		livraisonRepository.clearLivreurByUser(targetId);
 		ecomTransactionRepository.deleteByAcheteur_Iduser(targetId);

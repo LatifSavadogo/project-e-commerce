@@ -67,6 +67,16 @@ public class EcomTransaction {
 	@OneToOne(mappedBy = "transaction", fetch = FetchType.LAZY)
 	private Livraison livraison;
 
+	/**
+	 * Point de dépôt pour cette commande (ex. travail) ; si null, on utilise le domicile de l’acheteur
+	 * ({@link User#getLatitude()} / {@link User#getLongitude()}).
+	 */
+	@Column(name = "livraison_latitude")
+	private Double livraisonLatitude;
+
+	@Column(name = "livraison_longitude")
+	private Double livraisonLongitude;
+
 	@PrePersist
 	public void prePersist() {
 		datecreation = LocalDateTime.now();
@@ -177,5 +187,21 @@ public class EcomTransaction {
 
 	public void setLivraison(Livraison livraison) {
 		this.livraison = livraison;
+	}
+
+	public Double getLivraisonLatitude() {
+		return livraisonLatitude;
+	}
+
+	public void setLivraisonLatitude(Double livraisonLatitude) {
+		this.livraisonLatitude = livraisonLatitude;
+	}
+
+	public Double getLivraisonLongitude() {
+		return livraisonLongitude;
+	}
+
+	public void setLivraisonLongitude(Double livraisonLongitude) {
+		this.livraisonLongitude = livraisonLongitude;
 	}
 }

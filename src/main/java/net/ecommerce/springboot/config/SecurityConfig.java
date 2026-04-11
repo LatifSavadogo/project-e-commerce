@@ -62,10 +62,16 @@ public class SecurityConfig {
 		configuration.setAllowedOriginPatterns(Arrays.asList(
 				"http://localhost:*",
 				"http://127.0.0.1:*",
+				"https://localhost:*",
+				"https://127.0.0.1:*",
 				"http://192.168.11.106:*",
 				"http://192.168.*.*:*",
+				"https://192.168.*.*:*",
 				"http://10.*.*.*:*",
-				"http://*.*.*.*:5173"));
+				"https://10.*.*.*:*",
+				"http://0.0.0.0:5173",
+				"http://*.*.*.*:5173",
+				"https://*.*.*.*:5173"));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("*"));
 		configuration.setExposedHeaders(List.of("Set-Cookie"));

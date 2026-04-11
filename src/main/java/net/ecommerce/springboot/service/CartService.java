@@ -178,7 +178,7 @@ public class CartService {
 
 	@Transactional
 	public List<PaymentResultDTO> checkout(User buyer, PaymentMethod method, String referenceBase,
-			List<Integer> cartItemIds) {
+			List<Integer> cartItemIds, Double livraisonLatitude, Double livraisonLongitude) {
 		if (referenceBase == null || referenceBase.isBlank()) {
 			throw new IllegalArgumentException("La référence de transaction est obligatoire.");
 		}
@@ -217,8 +217,8 @@ public class CartService {
 			}
 			String uniqueRef = referenceBase.trim() + "|cartItem=" + itemId;
 			EcomTransaction t = paymentService.enregistrerPaiement(buyer, article.getIdarticle(), item.getQuantity(),
-					method, uniqueRef, prixNego, msgId);
-			out.add(PaymentResultDTO.fromEntity(t));
+					method, uniqueRef, prixNego, msgId, livraisonLatitude, livraisonLongitude);
+			out.add(PaymentResultDTO.fromEntity(t, false));
 			cart.getItems().remove(item);
 			cartItemRepository.delete(item);
 		}

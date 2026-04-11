@@ -48,6 +48,26 @@ public class Livraison {
 
 	private LocalDateTime dateLivraison;
 
+	/**
+	 * Jeton secret contenu dans le QR code client ; le livreur le scanne pour terminer la livraison.
+	 */
+	@Column(name = "client_delivery_token", length = 80)
+	private String clientDeliveryToken;
+
+	/** Code à communiquer au vendeur pour préparer le colis (affiché côté vendeur uniquement). */
+	@Column(name = "vendor_pickup_code", length = 16, unique = true)
+	private String vendorPickupCode;
+
+	/** Dernière position GPS partagée par le livreur pour le suivi client (Maps). */
+	@Column(name = "livreur_last_latitude")
+	private Double livreurLastLatitude;
+
+	@Column(name = "livreur_last_longitude")
+	private Double livreurLastLongitude;
+
+	@Column(name = "livreur_position_at")
+	private LocalDateTime livreurPositionAt;
+
 	@PrePersist
 	public void prePersist() {
 		if (datecreation == null) {
@@ -117,5 +137,53 @@ public class Livraison {
 
 	public void setDateLivraison(LocalDateTime dateLivraison) {
 		this.dateLivraison = dateLivraison;
+	}
+
+	public String getClientDeliveryToken() {
+		return clientDeliveryToken;
+	}
+
+	public void setClientDeliveryToken(String clientDeliveryToken) {
+		this.clientDeliveryToken = clientDeliveryToken;
+	}
+
+	public String getVendorPickupCode() {
+		return vendorPickupCode;
+	}
+
+	public void setVendorPickupCode(String vendorPickupCode) {
+		this.vendorPickupCode = vendorPickupCode;
+	}
+
+	/** Contenu à encoder dans le QR (sans montants). */
+	public String buildClientQrPayload() {
+		if (idlivraison == null || clientDeliveryToken == null || clientDeliveryToken.isBlank()) {
+			return null;
+		}
+		return "ECOM;" + idlivraison + ";" + clientDeliveryToken;
+	}
+
+	public Double getLivreurLastLatitude() {
+		return livreurLastLatitude;
+	}
+
+	public void setLivreurLastLatitude(Double livreurLastLatitude) {
+		this.livreurLastLatitude = livreurLastLatitude;
+	}
+
+	public Double getLivreurLastLongitude() {
+		return livreurLastLongitude;
+	}
+
+	public void setLivreurLastLongitude(Double livreurLastLongitude) {
+		this.livreurLastLongitude = livreurLastLongitude;
+	}
+
+	public LocalDateTime getLivreurPositionAt() {
+		return livreurPositionAt;
+	}
+
+	public void setLivreurPositionAt(LocalDateTime livreurPositionAt) {
+		this.livreurPositionAt = livreurPositionAt;
 	}
 }

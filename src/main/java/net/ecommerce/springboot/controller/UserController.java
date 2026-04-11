@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +36,7 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.validation.Valid;
 import net.ecommerce.springboot.dto.AdminPasswordResetDTO;
 import net.ecommerce.springboot.dto.AdminUserPatchDTO;
+import net.ecommerce.springboot.dto.LivraisonPositionDTO;
 import net.ecommerce.springboot.dto.UserDTO;
 import net.ecommerce.springboot.exception.ResourceNotFoundException;
 import net.ecommerce.springboot.model.Pays;
@@ -49,7 +51,9 @@ import net.ecommerce.springboot.security.RoleNames;
 import net.ecommerce.springboot.service.AuthService;
 import net.ecommerce.springboot.service.GdprExportService;
 import net.ecommerce.springboot.service.LivraisonService;
+import net.ecommerce.springboot.service.RoleUpgradeService;
 import net.ecommerce.springboot.service.UserService;
+import net.ecommerce.springboot.util.GeoCoordinates;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -97,6 +101,25 @@ public class UserController {
 				.body(payload);
 	}
 
+	/**
+	 * Domicile GPS (référence pour les paiements). Alias de {@code /api/v1/me/delivery-location} : même contrat JSON,
+	 * aligné sur {@code /users/me/data-export} pour éviter les 404 si un proxy ou une ancienne config ne route pas {@code /me/*}.
+	 */
+	@RequestMapping(value = "/users/me/delivery-location", method = { RequestMethod.POST, RequestMethod.PATCH,
+			RequestMethod.PUT }, consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<?> saveMyDeliveryLocation(@Valid @RequestBody LivraisonPositionDTO body) {
+		User u = authService.getCurrentUser();
+		if (u == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Non authentifié"));
+		}
+		try {
+			User updated = userService.updateMyDeliveryLocation(u, body.getLatitude(), body.getLongitude());
+			return ResponseEntity.ok(UserDTO.fromEntity(updated));
+		} catch (IllegalArgumentException ex) {
+			return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+		}
+	}
+
 	@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 	@GetMapping("/users")
 	public ResponseEntity<List<UserDTO>> getAllUsers() {
@@ -118,6 +141,8 @@ public class UserController {
 			@RequestParam(required = false) Integer idrole, @RequestParam(required = false) Integer idpays,
 			@RequestParam(required = false) Integer idtypeVendeur,
 			@RequestParam(required = false) String typeEnginLivreur,
+			@RequestParam(required = false) String latitude,
+			@RequestParam(required = false) String longitude,
 			@RequestParam("cnib") MultipartFile cnibFile) {
 		try {
 			if (cnibFile.isEmpty()) {
@@ -153,6 +178,25 @@ public class UserController {
 					TypeArticle cat = typeArticleRepository.findById(idtypeVendeur).orElseThrow(
 							() -> new ResourceNotFoundException("Type d'article introuvable : " + idtypeVendeur));
 					user.setCategorieVendeur(cat);
+					Double lat;
+					Double lon;
+					try {
+						lat = parseCoordParam(latitude);
+						lon = parseCoordParam(longitude);
+					} catch (IllegalArgumentException ex) {
+						return ResponseEntity.badRequest().body(ex.getMessage());
+					}
+					if (lat == null || lon == null) {
+						return ResponseEntity.badRequest().body(
+								"latitude et longitude obligatoires pour un compte vendeur (point de vente / retrait).");
+					}
+					try {
+						GeoCoordinates.assertValidRange(lat, lon);
+					} catch (IllegalArgumentException ex) {
+						return ResponseEntity.badRequest().body(ex.getMessage());
+					}
+					user.setLatitude(lat);
+					user.setLongitude(lon);
 				}
 				if (RoleNames.LIVREUR.equalsIgnoreCase(role.getLibrole())) {
 					if (typeEnginLivreur == null || typeEnginLivreur.isBlank()) {
@@ -187,6 +231,8 @@ public class UserController {
 			@RequestParam(required = false) Integer idrole, @RequestParam(required = false) Integer idpays,
 			@RequestParam(required = false) Integer idtypeVendeur,
 			@RequestParam(required = false) String typeEnginLivreur,
+			@RequestParam(required = false) String latitude,
+			@RequestParam(required = false) String longitude,
 			@RequestParam(value = "cnib", required = false) MultipartFile cnibFile) {
 		try {
 			User user = userRepository.findById(iduser)
@@ -257,6 +303,30 @@ public class UserController {
 			} else {
 				user.setPays(null);
 			}
+			Double latPatch;
+			Double lonPatch;
+			try {
+				latPatch = parseCoordParam(latitude);
+				lonPatch = parseCoordParam(longitude);
+			} catch (IllegalArgumentException ex) {
+				return ResponseEntity.badRequest().body(ex.getMessage());
+			}
+			if (latPatch != null) {
+				user.setLatitude(latPatch);
+			}
+			if (lonPatch != null) {
+				user.setLongitude(lonPatch);
+			}
+			if (user.getRole() != null && RoleNames.VENDEUR.equalsIgnoreCase(user.getRole().getLibrole())) {
+				try {
+					GeoCoordinates.requireLatLng(user.getLatitude(), user.getLongitude(),
+							"latitude et longitude obligatoires pour un compte vendeur (formulaire admin).");
+				} catch (IllegalArgumentException ex) {
+					return ResponseEntity.badRequest().body(ex.getMessage());
+				} catch (IllegalStateException ex) {
+					return ResponseEntity.badRequest().body(ex.getMessage());
+				}
+			}
 			user.setUserupdate(authService.getCurrentUserEmail());
 			user.setDateupdate(LocalDateTime.now());
 			return ResponseEntity.ok(UserDTO.fromEntity(userService.saveWithEncodedPassword(user)));
@@ -300,6 +370,16 @@ public class UserController {
 		if (userDTO.getVille() != null) {
 			String v = userDTO.getVille().trim();
 			user.setVille(v.isEmpty() ? null : v);
+		}
+		if (userDTO.getLatitude() != null) {
+			user.setLatitude(userDTO.getLatitude());
+		}
+		if (userDTO.getLongitude() != null) {
+			user.setLongitude(userDTO.getLongitude());
+		}
+		if (user.getRole() != null && RoleNames.VENDEUR.equalsIgnoreCase(user.getRole().getLibrole())) {
+			GeoCoordinates.requireLatLng(user.getLatitude(), user.getLongitude(),
+					"Un vendeur doit avoir une latitude et une longitude dans le profil.");
 		}
 		if (userDTO.getTypeEnginLivreur() != null && !userDTO.getTypeEnginLivreur().isBlank()) {
 			if (user.getRole() == null || !RoleNames.LIVREUR.equalsIgnoreCase(user.getRole().getLibrole())) {
@@ -354,6 +434,12 @@ public class UserController {
 					file.delete();
 				}
 			}
+			if (target.getPhotoProfil() != null) {
+				File ph = new File(RoleUpgradeService.PHOTO_DIR + target.getPhotoProfil());
+				if (ph.exists()) {
+					ph.delete();
+				}
+			}
 			userService.deleteUserAsAdmin(admin, iduser);
 			Map<String, Boolean> response = new HashMap<>();
 			response.put("supprimé", Boolean.TRUE);
@@ -386,6 +472,17 @@ public class UserController {
 					.body(resource);
 		} catch (IOException e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+		}
+	}
+
+	private static Double parseCoordParam(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		try {
+			return Double.parseDouble(raw.trim().replace(',', '.'));
+		} catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Coordonnée GPS invalide.");
 		}
 	}
 

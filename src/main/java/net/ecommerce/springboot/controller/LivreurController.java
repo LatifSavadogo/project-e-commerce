@@ -1,7 +1,7 @@
 package net.ecommerce.springboot.controller;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,19 +11,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
-import net.ecommerce.springboot.dto.LivraisonDTO;
+import net.ecommerce.springboot.dto.LivraisonLivreurDTO;
+import net.ecommerce.springboot.dto.LivraisonPositionDTO;
+import net.ecommerce.springboot.dto.LivraisonTerminerRequestDTO;
 import net.ecommerce.springboot.dto.LivreurDashboardDTO;
 import net.ecommerce.springboot.dto.LivreurEnginPatchDTO;
 import net.ecommerce.springboot.dto.LivreurTakeDeliveryDTO;
 import net.ecommerce.springboot.dto.UserDTO;
+import net.ecommerce.springboot.exception.ResourceNotFoundException;
 import net.ecommerce.springboot.model.TypeEnginLivreur;
 import net.ecommerce.springboot.model.User;
+import net.ecommerce.springboot.security.RoleNames;
 import net.ecommerce.springboot.service.AuthService;
 import net.ecommerce.springboot.service.LivraisonService;
 
 @RestController
 @RequestMapping("/api/v1/livreur")
-@PreAuthorize("hasRole('LIVREUR')")
 public class LivreurController {
 
 	private final LivraisonService livraisonService;
@@ -42,8 +45,23 @@ public class LivreurController {
 
 	@GetMapping("/livraisons/disponibles")
 	public ResponseEntity<?> disponibles() {
-		requireLivreur();
-		return ResponseEntity.ok(livraisonService.listDisponibles());
+		User u = requireLivreur();
+		return ResponseEntity.ok(livraisonService.listDisponiblesPourLivreur(u));
+	}
+
+	@PostMapping("/livraisons/{id}/ignorer")
+	public ResponseEntity<?> ignorer(@PathVariable("id") Integer id) {
+		User u = requireLivreur();
+		try {
+			livraisonService.ignorerOffre(u, id);
+			return ResponseEntity.ok(java.util.Map.of("ok", true));
+		} catch (ResourceNotFoundException e) {
+			return ResponseEntity.status(404).body(java.util.Map.of("error", e.getMessage()));
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+		} catch (IllegalStateException e) {
+			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+		}
 	}
 
 	@PostMapping("/livraisons/{id}/prendre")
@@ -57,8 +75,10 @@ public class LivreurController {
 					.body(java.util.Map.of("error", "typeEngin invalide (MOTO ou VEHICULE)."));
 		}
 		try {
-			LivraisonDTO dto = livraisonService.prendreEnCharge(u, id, engin);
+			LivraisonLivreurDTO dto = livraisonService.prendreEnCharge(u, id, engin);
 			return ResponseEntity.ok(dto);
+		} catch (ResourceNotFoundException e) {
+			return ResponseEntity.status(404).body(java.util.Map.of("error", e.getMessage()));
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
 		} catch (IllegalStateException e) {
@@ -66,11 +86,31 @@ public class LivreurController {
 		}
 	}
 
-	@PostMapping("/livraisons/{id}/terminer")
-	public ResponseEntity<?> terminer(@PathVariable("id") Integer id) {
+	@PostMapping("/livraisons/{id}/position")
+	public ResponseEntity<?> publierPosition(@PathVariable("id") Integer id, @Valid @RequestBody LivraisonPositionDTO body) {
 		User u = requireLivreur();
 		try {
-			return ResponseEntity.ok(livraisonService.terminerCourse(u, id));
+			livraisonService.publierPositionLivreur(u, id, body);
+			return ResponseEntity.ok(java.util.Map.of("ok", true));
+		} catch (ResourceNotFoundException e) {
+			return ResponseEntity.status(404).body(java.util.Map.of("error", e.getMessage()));
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+		} catch (IllegalStateException e) {
+			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+		}
+	}
+
+	/** Finalisation après scan du QR affiché par le client (obligatoire). */
+	@PostMapping("/livraisons/terminer-par-scan")
+	public ResponseEntity<?> terminerParScan(@Valid @RequestBody LivraisonTerminerRequestDTO body) {
+		User u = requireLivreur();
+		try {
+			return ResponseEntity.ok(livraisonService.terminerParScanQrClient(u, body.getClientQrPayload()));
+		} catch (ResourceNotFoundException e) {
+			return ResponseEntity.status(404).body(java.util.Map.of("error", e.getMessage()));
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
 		} catch (IllegalStateException e) {
 			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
 		}
@@ -87,10 +127,18 @@ public class LivreurController {
 		}
 	}
 
+	/**
+	 * Contrôle le rôle livreur à partir de l’utilisateur rechargé en base (via la session), pas à partir des
+	 * {@code GrantedAuthority} figés au login — sinon, après validation admin d’une demande livreur, la session
+	 * resterait en ROLE_ACHETEUR et les API livreur renverraient 403 alors que /me affiche déjà LIVREUR.
+	 */
 	private User requireLivreur() {
 		User u = authService.getCurrentUser();
 		if (u == null) {
 			throw new IllegalStateException("Non authentifié");
+		}
+		if (u.getRole() == null || !RoleNames.LIVREUR.equalsIgnoreCase(u.getRole().getLibrole())) {
+			throw new AccessDeniedException("Réservé aux comptes livreur.");
 		}
 		return u;
 	}

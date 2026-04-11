@@ -37,6 +37,15 @@ public class User {
 	
 	@Column(name= "cnib")
 	private String cnib;
+
+	@Column(name = "photo_profil", length = 512)
+	private String photoProfil;
+
+	@Column(name = "latitude")
+	private Double latitude;
+
+	@Column(name = "longitude")
+	private Double longitude;
 	
 	@ManyToOne
 	@JoinColumn(name = "idrole")
@@ -130,6 +139,31 @@ public class User {
     public void setCnib(String cnib) {
     	this.cnib=cnib;
     }
+
+	public String getPhotoProfil() {
+		return photoProfil;
+	}
+
+	public void setPhotoProfil(String photoProfil) {
+		this.photoProfil = photoProfil;
+	}
+
+	public Double getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(Double latitude) {
+		this.latitude = latitude;
+	}
+
+	public Double getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(Double longitude) {
+		this.longitude = longitude;
+	}
+
     public Role getRole() {
     	return role;
     }

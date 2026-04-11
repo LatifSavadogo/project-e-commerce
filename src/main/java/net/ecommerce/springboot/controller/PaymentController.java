@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import net.ecommerce.springboot.dto.CartCheckoutDTO;
+import net.ecommerce.springboot.dto.ClientLivraisonQrDTO;
+import net.ecommerce.springboot.dto.CommandeSuiviDTO;
 import net.ecommerce.springboot.dto.PaymentCreateDTO;
 import net.ecommerce.springboot.dto.PaymentResultDTO;
 import net.ecommerce.springboot.dto.VendorSalesDashboardDTO;
@@ -22,6 +24,7 @@ import net.ecommerce.springboot.model.EcomTransaction;
 import net.ecommerce.springboot.model.User;
 import net.ecommerce.springboot.service.AuthService;
 import net.ecommerce.springboot.service.CartService;
+import net.ecommerce.springboot.service.LivraisonService;
 import net.ecommerce.springboot.service.PaymentService;
 
 @RestController
@@ -31,19 +34,23 @@ public class PaymentController {
 	private final PaymentService paymentService;
 	private final CartService cartService;
 	private final AuthService authService;
+	private final LivraisonService livraisonService;
 
-	public PaymentController(PaymentService paymentService, CartService cartService, AuthService authService) {
+	public PaymentController(PaymentService paymentService, CartService cartService, AuthService authService,
+			LivraisonService livraisonService) {
 		this.paymentService = paymentService;
 		this.cartService = cartService;
 		this.authService = authService;
+		this.livraisonService = livraisonService;
 	}
 
 	@PostMapping
 	public ResponseEntity<PaymentResultDTO> payer(@Valid @RequestBody PaymentCreateDTO body) {
 		User u = requireUser();
 		EcomTransaction t = paymentService.enregistrerPaiement(u, body.getIdArticle(), body.getQuantite(),
-				body.getMoyenPaiement(), body.getReferenceExterne(), body.getPrixUnitaireNegocie());
-		return ResponseEntity.status(HttpStatus.CREATED).body(PaymentResultDTO.fromEntity(t));
+				body.getMoyenPaiement(), body.getReferenceExterne(), body.getPrixUnitaireNegocie(), null,
+				body.getLivraisonLatitude(), body.getLivraisonLongitude());
+		return ResponseEntity.status(HttpStatus.CREATED).body(PaymentResultDTO.fromEntity(t, false));
 	}
 
 	/** Règle chaque ligne du panier comme un paiement distinct (référence externe dérivée par ligne). */
@@ -53,10 +60,22 @@ public class PaymentController {
 		try {
 			return ResponseEntity.status(HttpStatus.CREATED)
 					.body(cartService.checkout(u, body.getMoyenPaiement(), body.getReferenceExterne(),
-							body.getCartItemIds()));
+							body.getCartItemIds(), body.getLivraisonLatitude(), body.getLivraisonLongitude()));
 		} catch (IllegalStateException | IllegalArgumentException e) {
 			return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
 		}
+	}
+
+	@GetMapping("/{id}/livraison/qr")
+	public ResponseEntity<ClientLivraisonQrDTO> qrLivraisonClient(@PathVariable Integer id) {
+		User u = requireUser();
+		return ResponseEntity.ok(livraisonService.buildClientQrPackForBuyer(u, id));
+	}
+
+	@GetMapping("/{id}/suivi")
+	public ResponseEntity<CommandeSuiviDTO> suiviCommande(@PathVariable Integer id) {
+		User u = requireUser();
+		return ResponseEntity.ok(livraisonService.buildBuyerOrderTracking(u, id));
 	}
 
 	@GetMapping("/mine")

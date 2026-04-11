@@ -6,9 +6,11 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import net.ecommerce.springboot.dto.CommandeSuiviDTO;
 import net.ecommerce.springboot.dto.LivraisonDTO;
 import net.ecommerce.springboot.service.LivraisonService;
 
@@ -26,6 +28,11 @@ public class AdminLivraisonController {
 	@GetMapping
 	public ResponseEntity<List<LivraisonDTO>> listAll() {
 		return ResponseEntity.ok(livraisonService.listAllForAdmin());
+	}
+
+	@GetMapping("/{id}/suivi")
+	public ResponseEntity<CommandeSuiviDTO> suivi(@PathVariable("id") Integer idlivraison) {
+		return ResponseEntity.ok(livraisonService.buildStaffOrderTrackingByLivraisonId(idlivraison));
 	}
 
 	@GetMapping("/stats")

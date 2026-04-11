@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import net.ecommerce.springboot.model.EcomTransaction;
 import net.ecommerce.springboot.model.Livraison;
 import net.ecommerce.springboot.model.PaymentMethod;
+import net.ecommerce.springboot.util.VendorOrderReferenceCodec;
 
 public class PaymentResultDTO {
 
@@ -21,8 +22,12 @@ public class PaymentResultDTO {
 	private Integer idLivraison;
 	private String livraisonStatut;
 	private String livraisonTypeEngin;
+	/** Visible seulement vendeur / staff (pas l’acheteur). */
+	private String vendorPickupCode;
+	/** Métadonnées commande encodées Base64 (sans montant) — vendeur / staff. */
+	private String vendorPackedReferenceBase64;
 
-	public static PaymentResultDTO fromEntity(EcomTransaction t) {
+	public static PaymentResultDTO fromEntity(EcomTransaction t, boolean exposeVendorSecrets) {
 		PaymentResultDTO d = new PaymentResultDTO();
 		d.setIdtransaction(t.getIdtransaction());
 		if (t.getArticle() != null) {
@@ -42,6 +47,10 @@ public class PaymentResultDTO {
 			d.setLivraisonStatut(liv.getStatut().name());
 			if (liv.getTypeEnginUtilise() != null) {
 				d.setLivraisonTypeEngin(liv.getTypeEnginUtilise().name());
+			}
+			if (exposeVendorSecrets && liv.getVendorPickupCode() != null) {
+				d.setVendorPickupCode(liv.getVendorPickupCode());
+				d.setVendorPackedReferenceBase64(VendorOrderReferenceCodec.encode(t, liv, liv.getVendorPickupCode()));
 			}
 		}
 		return d;
@@ -149,5 +158,21 @@ public class PaymentResultDTO {
 
 	public void setLivraisonTypeEngin(String livraisonTypeEngin) {
 		this.livraisonTypeEngin = livraisonTypeEngin;
+	}
+
+	public String getVendorPickupCode() {
+		return vendorPickupCode;
+	}
+
+	public void setVendorPickupCode(String vendorPickupCode) {
+		this.vendorPickupCode = vendorPickupCode;
+	}
+
+	public String getVendorPackedReferenceBase64() {
+		return vendorPackedReferenceBase64;
+	}
+
+	public void setVendorPackedReferenceBase64(String vendorPackedReferenceBase64) {
+		this.vendorPackedReferenceBase64 = vendorPackedReferenceBase64;
 	}
 }
