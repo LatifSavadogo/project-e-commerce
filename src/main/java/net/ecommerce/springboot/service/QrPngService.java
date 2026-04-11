@@ -16,15 +16,27 @@ public class QrPngService {
 	private static final int SIZE_PX = 280;
 
 	public String encodeQrAsPngBase64(String text) {
+		return Base64.getEncoder().encodeToString(encodeQrAsPngBytes(text, SIZE_PX));
+	}
+
+	/** PNG brut (ex. embarqué dans un PDF). */
+	public byte[] encodeQrAsPngBytes(String text) {
+		return encodeQrAsPngBytes(text, SIZE_PX);
+	}
+
+	public byte[] encodeQrAsPngBytes(String text, int sizePx) {
 		if (text == null || text.isBlank()) {
 			throw new IllegalArgumentException("Texte QR vide.");
 		}
+		if (sizePx < 64 || sizePx > 800) {
+			throw new IllegalArgumentException("Taille QR invalide.");
+		}
 		try {
 			QRCodeWriter writer = new QRCodeWriter();
-			BitMatrix matrix = writer.encode(text, BarcodeFormat.QR_CODE, SIZE_PX, SIZE_PX);
+			BitMatrix matrix = writer.encode(text, BarcodeFormat.QR_CODE, sizePx, sizePx);
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			MatrixToImageWriter.writeToStream(matrix, "PNG", baos);
-			return Base64.getEncoder().encodeToString(baos.toByteArray());
+			return baos.toByteArray();
 		} catch (Exception e) {
 			throw new IllegalStateException("Génération du QR impossible.", e);
 		}

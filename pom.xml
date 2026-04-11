@@ -114,6 +114,13 @@
 			<version>3.5.3</version>
 		</dependency>
 
+		<!-- Reçu de paiement PDF -->
+		<dependency>
+			<groupId>com.github.librepdf</groupId>
+			<artifactId>openpdf</artifactId>
+			<version>2.0.3</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

@@ -3,6 +3,8 @@ package net.ecommerce.springboot.dto;
 import net.ecommerce.springboot.model.EcomTransaction;
 import net.ecommerce.springboot.model.Livraison;
 import net.ecommerce.springboot.model.LivraisonStatut;
+import net.ecommerce.springboot.model.User;
+import net.ecommerce.springboot.util.NavigationUrls;
 
 /**
  * Vue livreur : pas de montants ni prix.
@@ -26,6 +28,8 @@ public class LivraisonLivreurDTO {
 	private String datePriseEnCharge;
 	private String dateLivraison;
 	private LivreurNavigationDTO navigation;
+	/** Lien Google Maps (recherche lat,lng) vers le point de dépôt client (commande ou domicile acheteur). */
+	private String lieuDepotCarteUrl;
 
 	public static LivraisonLivreurDTO fromEntity(Livraison l) {
 		LivraisonLivreurDTO d = new LivraisonLivreurDTO();
@@ -62,6 +66,18 @@ public class LivraisonLivreurDTO {
 			}
 			if (t.getVendeur() != null) {
 				d.setVendeurEmail(t.getVendeur().getEmail());
+			}
+			Double lat = t.getLivraisonLatitude();
+			Double lng = t.getLivraisonLongitude();
+			if (lat == null || lng == null) {
+				User acheteur = t.getAcheteur();
+				if (acheteur != null) {
+					lat = acheteur.getLatitude();
+					lng = acheteur.getLongitude();
+				}
+			}
+			if (lat != null && lng != null) {
+				d.setLieuDepotCarteUrl(NavigationUrls.googleMapsSearchLatLng(lat, lng));
 			}
 		}
 		return d;
@@ -205,5 +221,13 @@ public class LivraisonLivreurDTO {
 
 	public boolean isNavigationPossible() {
 		return statut != null && LivraisonStatut.EN_COURS.name().equals(statut) && navigation != null;
+	}
+
+	public String getLieuDepotCarteUrl() {
+		return lieuDepotCarteUrl;
+	}
+
+	public void setLieuDepotCarteUrl(String lieuDepotCarteUrl) {
+		this.lieuDepotCarteUrl = lieuDepotCarteUrl;
 	}
 }

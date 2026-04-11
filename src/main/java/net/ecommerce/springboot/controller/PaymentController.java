@@ -96,15 +96,18 @@ public class PaymentController {
 		return ResponseEntity.ok(paymentService.buildVendorSalesDashboard(u.getIduser()));
 	}
 
-	@GetMapping(value = "/{id}/receipt", produces = MediaType.TEXT_PLAIN_VALUE + ";charset=UTF-8")
-	public ResponseEntity<String> receipt(@PathVariable Integer id) {
+	@GetMapping(value = "/{id}/receipt", produces = MediaType.APPLICATION_PDF_VALUE)
+	public ResponseEntity<byte[]> receiptPdf(@PathVariable Integer id) {
 		User u = requireUser();
 		EcomTransaction t = paymentService.getTransactionOrThrow(id);
 		paymentService.assertCanViewReceipt(t, u);
-		String text = paymentService.buildReceiptText(t);
+		byte[] pdf = paymentService.buildReceiptPdf(t, u);
 		return ResponseEntity.ok()
-				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"recu-" + id + ".txt\"")
-				.body(text);
+				.contentType(MediaType.APPLICATION_PDF)
+				.header(HttpHeaders.CACHE_CONTROL, "no-store")
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"recu-ecomarket-" + id + ".pdf\"")
+				.header(HttpHeaders.CONTENT_LENGTH, String.valueOf(pdf.length))
+				.body(pdf);
 	}
 
 	private User requireUser() {

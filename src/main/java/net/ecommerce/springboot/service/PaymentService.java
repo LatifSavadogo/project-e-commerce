@@ -1,5 +1,6 @@
 package net.ecommerce.springboot.service;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,6 +10,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import net.ecommerce.springboot.dto.ClientLivraisonQrDTO;
 import net.ecommerce.springboot.dto.PaymentResultDTO;
 import net.ecommerce.springboot.dto.VendorPaymentMethodStatDTO;
 import net.ecommerce.springboot.dto.VendorSalesDashboardDTO;
@@ -24,6 +26,7 @@ import net.ecommerce.springboot.repository.ArticleRepository;
 import net.ecommerce.springboot.repository.ChatMessageRepository;
 import net.ecommerce.springboot.repository.EcomTransactionRepository;
 import net.ecommerce.springboot.repository.UserRepository;
+import net.ecommerce.springboot.util.BuyerOrderReceiptQrCodec;
 import net.ecommerce.springboot.util.GeoCoordinates;
 
 @Service
@@ -35,16 +38,18 @@ public class PaymentService {
 	private final UserRepository userRepository;
 	private final TransactionReferenceCrypto referenceCrypto;
 	private final LivraisonService livraisonService;
+	private final QrPngService qrPngService;
 
 	public PaymentService(EcomTransactionRepository transactionRepository, ArticleRepository articleRepository,
 			ChatMessageRepository chatMessageRepository, UserRepository userRepository,
-			TransactionReferenceCrypto referenceCrypto, LivraisonService livraisonService) {
+			TransactionReferenceCrypto referenceCrypto, LivraisonService livraisonService, QrPngService qrPngService) {
 		this.transactionRepository = transactionRepository;
 		this.articleRepository = articleRepository;
 		this.chatMessageRepository = chatMessageRepository;
 		this.userRepository = userRepository;
 		this.referenceCrypto = referenceCrypto;
 		this.livraisonService = livraisonService;
+		this.qrPngService = qrPngService;
 	}
 
 	@Transactional
@@ -283,23 +288,43 @@ public class PaymentService {
 		}
 	}
 
-	public String buildReceiptText(EcomTransaction t) {
-		String ref = referenceCrypto.decrypt(t.getRefExterneCryptee());
-		StringBuilder sb = new StringBuilder();
-		sb.append("========== ECOMARKET - RECU DE PAIEMENT ==========\n");
-		sb.append("ID transaction interne: ").append(t.getIdtransaction()).append("\n");
-		sb.append("Date: ").append(t.getDatecreation()).append("\n");
-		sb.append("Article: ").append(t.getArticle().getLibarticle()).append(" (#").append(t.getArticle().getIdarticle())
-				.append(")\n");
-		sb.append("Quantite: ").append(t.getQuantite()).append("\n");
-		sb.append("Prix unitaire (snapshot): ").append(t.getPrixUnitaireSnapshot()).append("\n");
-		sb.append("Montant total: ").append(t.getMontantTotal()).append("\n");
-		sb.append("Frais (affiches): ").append(t.getFraisAffiches()).append("\n");
-		sb.append("Moyen de paiement: ").append(t.getMoyenPaiement()).append("\n");
-		sb.append("Reference externe: ").append(ref).append("\n");
-		sb.append("Acheteur: ").append(t.getAcheteur().getEmail()).append("\n");
-		sb.append("Vendeur: ").append(t.getVendeur().getEmail()).append("\n");
-		sb.append("==================================================\n");
-		return sb.toString();
+	/**
+	 * @param requester utilisateur authentifié : le QR « réception livreur » (jeton secret) n’est inclus que si c’est l’acheteur.
+	 */
+	/** read-write : peut appeler la même chaîne que l’API QR (création du jeton client si besoin). */
+	@Transactional
+	public byte[] buildReceiptPdf(EcomTransaction t, User requester) {
+		EcomTransaction full = transactionRepository.findByIdWithLivraisonAndLivreur(t.getIdtransaction())
+				.orElseThrow(() -> new ResourceNotFoundException("Transaction introuvable : " + t.getIdtransaction()));
+		String ref = referenceCrypto.decrypt(full.getRefExterneCryptee());
+
+		byte[] qrLivraisonPng = null;
+		String qrLivraisonNote = null;
+		boolean buyerView = requester != null && full.getAcheteur() != null
+				&& requester.getIduser().equals(full.getAcheteur().getIduser());
+
+		if (!buyerView) {
+			qrLivraisonNote = "QR réception (livreur) : réservé à l'acheteur — non inclus sur ce document.";
+		} else {
+			// Identique à l’écran Mes achats : même service, même taille PNG (280 px) que l’API livraison/qr.
+			try {
+				ClientLivraisonQrDTO pack = livraisonService.buildClientQrPackForBuyer(requester, full.getIdtransaction());
+				qrLivraisonPng = qrPngService.encodeQrAsPngBytes(pack.getQrPayload());
+			} catch (IllegalStateException ex) {
+				qrLivraisonNote = ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage()
+						: "QR réception indisponible.";
+			} catch (ResourceNotFoundException ex) {
+				qrLivraisonNote = ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage()
+						: "Commande introuvable.";
+			}
+		}
+
+		byte[] qrAchatPng = qrPngService.encodeQrAsPngBytes(BuyerOrderReceiptQrCodec.encode(full));
+
+		try {
+			return PaymentReceiptPdfWriter.build(full, ref, qrLivraisonPng, qrLivraisonNote, qrAchatPng);
+		} catch (IOException e) {
+			throw new IllegalStateException("Impossible de générer le reçu PDF.", e);
+		}
 	}
 }

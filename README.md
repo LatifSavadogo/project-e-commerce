@@ -16,6 +16,8 @@ API REST pour une marketplace (Ecomarket) : comptes acheteur / vendeur / admin, 
 | API | REST, multipart pour fichiers |
 | Documentation | Springdoc OpenAPI 3 (Swagger UI) |
 | E-mail | Spring Mail (SMTP) |
+| PDF (reçus) | OpenPDF |
+| QR codes | ZXing (client + génération PNG) |
 
 Les tests Maven utilisent **H2** en mémoire (`src/test/resources/application.properties`).
 
@@ -47,6 +49,7 @@ OpenAPI JSON : `http://localhost:8080/v3/api-docs`
 |----------------|-------------|
 | `spring.datasource.*` | URL, utilisateur, mot de passe MySQL |
 | `app.security.bootstrap-super-admin-password` / `BOOTSTRAP_SUPER_ADMIN_PASSWORD` | Mot de passe initial des comptes super-admin bootstrap (`latif@admin.com`, `pare@admin.com`) |
+| `app.security.bootstrap-livreur-password` / `BOOTSTRAP_LIVREUR_PASSWORD` | Mot de passe du compte livreur démo (`livreur@demo.ecom`) |
 | `app.crypto.aes-secret` / `APP_CRYPTO_AES_SECRET` | Secret pour le chiffrement AES des références de paiement en base |
 | `app.security.swagger-open` | `true` : Swagger sans session ; `false` : UI + spec réservées aux utilisateurs connectés (même origine) |
 | **E-mail (mot de passe oublié)** | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `PASSWORD_RESET_FRONTEND_URL`, `PASSWORD_RESET_TOKEN_MINUTES` |
@@ -55,7 +58,7 @@ OpenAPI JSON : `http://localhost:8080/v3/api-docs`
 
 ## Sécurité et rôles
 
-- **Rôles** (constantes `RoleNames`) : `ACHETEUR`, `VENDEUR`, `ADMIN`, `SUPER_ADMIN`.
+- **Rôles** (constantes `RoleNames`) : `ACHETEUR`, `VENDEUR`, `LIVREUR`, `ADMIN`, `SUPER_ADMIN`.
 - **Sessions** : cookie `JSESSIONID` après `POST /api/auth/login`.
 - **Filtre HTTP** : tout ce qui est sous `/api/v1/admin/**` exige `ADMIN` ou `SUPER_ADMIN` (en plus des `@PreAuthorize` sur les contrôleurs).
 - **Catalogue public** : seuls certains `GET` sous `/api/v1/articles` sont anonymes (liste, fiche, photos), pas un `/**` générique.
@@ -93,9 +96,16 @@ OpenAPI JSON : `http://localhost:8080/v3/api-docs`
 
 ### Paiements
 
-- Enregistrement avec moyen de paiement, quantité, référence externe.
+- Enregistrement avec moyen de paiement, quantité, référence externe ; checkout panier possible.
 - **Unicité** de la référence (hash) ; **chiffrement AES-GCM** de la référence stockée.
-- Reçu téléchargeable (texte).
+- **Reçu PDF** : `GET /api/v1/payments/{id}/receipt` (`application/pdf`) — acheteur, vendeur, staff ou livreur assigné. Détails, QR et règles d’accès : voir [`docs/livraison-recu-pdf.md`](docs/livraison-recu-pdf.md).
+- **Acheteur** : `GET /api/v1/payments/{id}/livraison/qr` (QR à présenter au livreur), `GET /api/v1/payments/{id}/suivi` (étapes + liens Maps selon le statut).
+
+### Livraisons & livreur
+
+- Après paiement avec livraison, création d’une **livraison** (statuts `EN_ATTENTE`, `EN_COURS`, `LIVREE`, `ANNULEE`) avec jeton secret pour le QR client.
+- **API livreur** (`/api/v1/livreur`) : tableau de bord, offres disponibles, **mes livraisons** (en cours + historique), prise en charge, partage de position, finalisation par **scan du QR client**.
+- Documentation détaillée des endpoints et du reçu : [`docs/livraison-recu-pdf.md`](docs/livraison-recu-pdf.md).
 
 ### Plaintes & admin
 
@@ -145,9 +155,10 @@ Pour les routes protégées : se connecter via `POST /api/auth/login` **sur le m
 
 ## Fichiers et dépendances notables ajoutés ou étendus
 
-- Dépendances : `spring-boot-starter-security`, `spring-boot-starter-mail`, `springdoc-openapi-starter-webmvc-ui`, `h2` (scope test).
+- Dépendances : `spring-boot-starter-security`, `spring-boot-starter-mail`, `springdoc-openapi-starter-webmvc-ui`, `openpdf`, `zxing` (core + javase), `h2` (scope test).
 - Entités / repos : offres sur messages, transactions, plaintes, `ArticleImage`, `PasswordResetToken`, etc.
-- Services : `PasswordResetService`, `MailNotificationService`, `ChatbotService`, `GdprExportService`, extensions `ArticleService`, `PaymentService`, `MessagingService`, etc.
+- Services : `PasswordResetService`, `MailNotificationService`, `ChatbotService`, `GdprExportService`, extensions `ArticleService`, `PaymentService`, `LivraisonService`, `PaymentReceiptPdfWriter`, `QrPngService`, `MessagingService`, etc.
+- Utilitaires : `BuyerOrderReceiptQrCodec`, `DeliveryTokens`, `VendorOrderReferenceCodec`, etc.
 - `ActiveSessionCounter` + listener HTTP session pour les stats « connectés ».
 - `GlobalExceptionHandler` (erreurs API homogènes).
 

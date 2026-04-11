@@ -42,6 +42,12 @@ public interface LivraisonRepository extends JpaRepository<Livraison, Integer> {
 
 	List<Livraison> findByLivreur_IduserOrderByDatecreationDesc(Integer idlivreur);
 
+	/**
+	 * Historique livreur : évite {@code JOIN FETCH} + {@code Pageable} (résultats tronqués / incohérents avec Hibernate).
+	 * Le chargement des lignes liées se fait en lazy dans la même transaction {@code @Transactional(readOnly=true)} du service.
+	 */
+	List<Livraison> findTop200ByLivreur_IduserOrderByDatecreationDesc(Integer idlivreur);
+
 	long countByLivreur_IduserAndStatut(Integer idlivreur, LivraisonStatut statut);
 
 	long countByLivreur_IduserAndStatutAndTypeEnginUtilise(Integer idlivreur, LivraisonStatut statut,

@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import net.ecommerce.springboot.dto.LivraisonLivreurDTO;
 import net.ecommerce.springboot.dto.LivraisonPositionDTO;
 import net.ecommerce.springboot.dto.LivreurDashboardDTO;
 import net.ecommerce.springboot.dto.LivreurEnginPatchDTO;
+import net.ecommerce.springboot.dto.LivreurMesLivraisonsDTO;
 import net.ecommerce.springboot.dto.LivreurNavigationDTO;
 import net.ecommerce.springboot.dto.SuiviEtapeDTO;
 import net.ecommerce.springboot.exception.ResourceNotFoundException;
@@ -42,6 +44,7 @@ import net.ecommerce.springboot.util.VendorOrderReferenceCodec;
 public class LivraisonService {
 
 	private static final int LIVREUR_POSITION_MAX_AGE_MINUTES = 45;
+	private static final int MES_LIVRAISONS_PAGE_SIZE = 200;
 
 	private final LivraisonRepository livraisonRepository;
 	private final UserRepository userRepository;
@@ -103,6 +106,34 @@ public class LivraisonService {
 				.toList();
 		d.setDernieresCourses(recent.stream().map(l -> toLivreurDtoWithNav(l, livreur)).toList());
 		return d;
+	}
+
+	/**
+	 * Courses en cours et terminées (livrées / annulées) pour l’historique livreur. Au plus 200 entrées les plus
+	 * récentes par date de création de la livraison.
+	 */
+	@Transactional(readOnly = true)
+	public LivreurMesLivraisonsDTO listMesLivraisonsPartitionnees(User livreur) {
+		assertLivreur(livreur);
+		List<Livraison> rows = livraisonRepository.findTop200ByLivreur_IduserOrderByDatecreationDesc(livreur.getIduser());
+		List<LivraisonLivreurDTO> enCours = new ArrayList<>();
+		List<LivraisonLivreurDTO> terminees = new ArrayList<>();
+		for (Livraison l : rows) {
+			LivraisonLivreurDTO d = toLivreurDtoWithNav(l, livreur);
+			if (l.getStatut() == LivraisonStatut.EN_COURS) {
+				enCours.add(d);
+			} else if (l.getStatut() == LivraisonStatut.LIVREE || l.getStatut() == LivraisonStatut.ANNULEE) {
+				terminees.add(d);
+			}
+		}
+		terminees.sort(Comparator
+				.comparing(LivraisonLivreurDTO::getDateLivraison, Comparator.nullsLast(Comparator.reverseOrder()))
+				.thenComparing(LivraisonLivreurDTO::getDatecreation, Comparator.nullsLast(Comparator.reverseOrder())));
+		LivreurMesLivraisonsDTO out = new LivreurMesLivraisonsDTO();
+		out.setEnCours(enCours);
+		out.setTerminees(terminees);
+		out.setLimiteChargee(MES_LIVRAISONS_PAGE_SIZE);
+		return out;
 	}
 
 	@Transactional(readOnly = true)
@@ -214,6 +245,7 @@ public class LivraisonService {
 		return LivraisonLivreurDTO.fromEntity(l);
 	}
 
+	/** Même logique que l’API GET /payments/{id}/livraison/qr (QR affiché dans Mes achats). */
 	@Transactional
 	public ClientLivraisonQrDTO buildClientQrPackForBuyer(User buyer, Integer idtransaction) {
 		EcomTransaction t = ecomTransactionRepository.findByIdWithLivraisonAndLivreur(idtransaction)
@@ -224,6 +256,12 @@ public class LivraisonService {
 		Livraison l = t.getLivraison();
 		if (l == null) {
 			throw new IllegalStateException("Aucune livraison associée à cette commande.");
+		}
+		if (l.getStatut() == LivraisonStatut.LIVREE) {
+			throw new IllegalStateException("Livraison effectuée : le QR n'est plus disponible.");
+		}
+		if (l.getStatut() == LivraisonStatut.ANNULEE) {
+			throw new IllegalStateException("Cette livraison a été annulée.");
 		}
 		if (l.getClientDeliveryToken() == null || l.getClientDeliveryToken().isBlank()) {
 			l.setClientDeliveryToken(DeliveryTokens.newClientDeliveryToken());
@@ -350,13 +388,26 @@ public class LivraisonService {
 			}
 		}
 
-		// Toujours proposer les liens Maps (retrait / livraison / trajet) dès qu’ils sont calculables,
-		// y compris en attente de livreur — sinon l’acheteur ne voit aucune carte.
-		boolean hasCarte = (d.getLienRetraitChezVendeur() != null && !d.getLienRetraitChezVendeur().isBlank())
-				|| (d.getLienLivraisonChezClient() != null && !d.getLienLivraisonChezClient().isBlank())
-				|| (d.getLienTrajetVendeurVersClient() != null && !d.getLienTrajetVendeurVersClient().isBlank())
-				|| (d.getLienLivreurVersClient() != null && !d.getLienLivreurVersClient().isBlank());
-		d.setNavigationDisponible(hasCarte);
+		// Acheteur : une fois la livraison clôturée (QR scanné → LIVREE, ou annulée), ne plus exposer aucun lien Maps
+		// (fin du suivi temps réel et des itinéraires côté client).
+		boolean termineePourAcheteur = !includeVendorSecrets && (l.getStatut() == LivraisonStatut.LIVREE
+				|| l.getStatut() == LivraisonStatut.ANNULEE);
+		if (termineePourAcheteur) {
+			d.setLienRetraitChezVendeur(null);
+			d.setLienLivraisonChezClient(null);
+			d.setLienTrajetVendeurVersClient(null);
+			d.setLienLivreurVersClient(null);
+			d.setLivreurPositionMiseAJourAt(null);
+			d.setNavigationDisponible(false);
+		} else {
+			// Toujours proposer les liens Maps (retrait / livraison / trajet) dès qu’ils sont calculables,
+			// y compris en attente de livreur — sinon l’acheteur ne voit aucune carte.
+			boolean hasCarte = (d.getLienRetraitChezVendeur() != null && !d.getLienRetraitChezVendeur().isBlank())
+					|| (d.getLienLivraisonChezClient() != null && !d.getLienLivraisonChezClient().isBlank())
+					|| (d.getLienTrajetVendeurVersClient() != null && !d.getLienTrajetVendeurVersClient().isBlank())
+					|| (d.getLienLivreurVersClient() != null && !d.getLienLivreurVersClient().isBlank());
+			d.setNavigationDisponible(hasCarte);
+		}
 
 		if (includeVendorSecrets && l.getVendorPickupCode() != null) {
 			d.setVendorPickupCode(l.getVendorPickupCode());

@@ -40,7 +40,7 @@ public class PaymentResultDTO {
 		d.setFrais(t.getFraisAffiches());
 		d.setMoyenPaiement(t.getMoyenPaiement());
 		d.setDatecreation(t.getDatecreation());
-		d.setMessage("Paiement enregistré. Téléchargez le reçu via GET /api/v1/payments/{id}/receipt");
+		d.setMessage("Paiement enregistré. Reçu PDF : GET /api/v1/payments/{id}/receipt");
 		Livraison liv = t.getLivraison();
 		if (liv != null) {
 			d.setIdLivraison(liv.getIdlivraison());

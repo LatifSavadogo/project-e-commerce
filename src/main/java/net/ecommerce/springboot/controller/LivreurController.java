@@ -15,6 +15,7 @@ import net.ecommerce.springboot.dto.LivraisonLivreurDTO;
 import net.ecommerce.springboot.dto.LivraisonPositionDTO;
 import net.ecommerce.springboot.dto.LivraisonTerminerRequestDTO;
 import net.ecommerce.springboot.dto.LivreurDashboardDTO;
+import net.ecommerce.springboot.dto.LivreurMesLivraisonsDTO;
 import net.ecommerce.springboot.dto.LivreurEnginPatchDTO;
 import net.ecommerce.springboot.dto.LivreurTakeDeliveryDTO;
 import net.ecommerce.springboot.dto.UserDTO;
@@ -47,6 +48,13 @@ public class LivreurController {
 	public ResponseEntity<?> disponibles() {
 		User u = requireLivreur();
 		return ResponseEntity.ok(livraisonService.listDisponiblesPourLivreur(u));
+	}
+
+	/** En cours + historique (livrées / annulées) avec détails pour la console livreur. */
+	@GetMapping("/livraisons/mes-livraisons")
+	public ResponseEntity<LivreurMesLivraisonsDTO> mesLivraisons() {
+		User u = requireLivreur();
+		return ResponseEntity.ok(livraisonService.listMesLivraisonsPartitionnees(u));
 	}
 
 	@PostMapping("/livraisons/{id}/ignorer")
