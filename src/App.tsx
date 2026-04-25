@@ -35,6 +35,8 @@ import LivreurCoursesPage from './pages/livreur/LivreurCoursesPage'
 import LivreurHistoriquePage from './pages/livreur/LivreurHistoriquePage'
 import LivreurParametresPage from './pages/livreur/LivreurParametresPage'
 import DemandeUpgrade from './pages/DemandeUpgrade'
+import PaydunyaReturn from './pages/PaydunyaReturn'
+import VendorCertification from './pages/VendorCertification'
 import AdminRoleUpgrades from './pages/AdminRoleUpgrades'
 import AdminLivraisonsPage from './pages/AdminLivraisonsPage'
 
@@ -86,6 +88,8 @@ function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/vendor" element={<VendorDashboard />} />
           <Route path="/vendor/add-product" element={<AddProduct />} />
+          <Route path="/vendor/certification" element={<VendorCertification />} />
+          <Route path="/paiement/paydunya" element={<PaydunyaReturn />} />
           <Route path="/livreur" element={<LivreurLayout />}>
             <Route index element={<LivreurOverview />} />
             <Route path="offres" element={<LivreurOffresPage />} />

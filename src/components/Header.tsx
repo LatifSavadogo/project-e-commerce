@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation, NavLink } from 'react-router-dom'
-import { Menu, ShoppingCart, UserRound, X } from 'lucide-react'
+import { Globe, Menu, ShoppingCart, UserRound, X } from 'lucide-react'
 import { useAuth, isStaffRole, isLivreurRole } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -150,6 +150,17 @@ export default function Header() {
         >
           <NavLink to="/listings" className={({ isActive }) => navClass(isActive)} end>
             Parcourir
+          </NavLink>
+          <NavLink
+            to={{ pathname: '/listings', search: '?international=1' }}
+            className={() =>
+              navClass(location.pathname === '/listings' && location.search.includes('international=1'))
+            }
+            onClick={() => setMobileNavOpen(false)}
+            title="Annonces des vendeurs internationaux"
+          >
+            <Globe {...iconMd} aria-hidden style={{ verticalAlign: 'middle' }} />
+            <span style={{ marginLeft: 6 }}>International</span>
           </NavLink>
           <NavLink to="/help" className={({ isActive }) => navClass(isActive)}>
             Aide

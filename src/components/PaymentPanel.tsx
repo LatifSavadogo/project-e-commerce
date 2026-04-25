@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { CreditCard, X } from 'lucide-react'
 import { createPayment, type PaymentMethod } from '../services/paymentApi'
+import { createPaydunyaOrderInvoice } from '../services/paydunyaApi'
 import { ApiError } from '../services/apiClient'
 import { useAuth } from '../contexts/AuthContext'
 import { iconSm } from './ui/iconProps'
 import DeliveryMapPicker from './DeliveryMapPicker'
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: 'PAYDUNYA', label: 'PayDunya (Orange, Moov, carte…)' },
   { value: 'ORANGE_MONEY', label: 'Orange Money' },
   { value: 'MOOV_MONEY', label: 'Moov Money' },
   { value: 'VIREMENT', label: 'Virement' },
@@ -41,7 +43,7 @@ export default function PaymentPanel({
   const [orderLat, setOrderLat] = useState<number | null>(null)
   const [orderLng, setOrderLng] = useState<number | null>(null)
   const [quantite, setQuantite] = useState('1')
-  const [moyen, setMoyen] = useState<PaymentMethod>('ORANGE_MONEY')
+  const [moyen, setMoyen] = useState<PaymentMethod>('PAYDUNYA')
   const [reference, setReference] = useState('')
   const [prixNego, setPrixNego] = useState(
     defaultPrixNegocie != null ? String(defaultPrixNegocie) : ''
@@ -89,7 +91,7 @@ export default function PaymentPanel({
       setError('Quantité entre 1 et 100')
       return
     }
-    if (!reference.trim()) {
+    if (moyen !== 'PAYDUNYA' && !reference.trim()) {
       setError('Référence de transaction obligatoire (reçue après paiement mobile, etc.)')
       return
     }
@@ -105,6 +107,17 @@ export default function PaymentPanel({
     }
     setBusy(true)
     try {
+      if (moyen === 'PAYDUNYA') {
+        const inv = await createPaydunyaOrderInvoice({
+          idArticle: articleId,
+          quantite: q,
+          prixUnitaireNegocie: prixUnitaireNegocie ?? null,
+          livraisonLatitude: deliveryMode === 'autre' && orderLat != null ? orderLat : null,
+          livraisonLongitude: deliveryMode === 'autre' && orderLng != null ? orderLng : null,
+        })
+        window.location.assign(inv.checkoutUrl)
+        return
+      }
       const res = await createPayment({
         idArticle: articleId,
         quantite: q,
@@ -185,7 +198,10 @@ export default function PaymentPanel({
         </button>
       </div>
       <p style={{ fontSize: '0.85em', color: 'var(--muted)', marginTop: 0 }}>
-        Prix catalogue : <strong>{prixCatalogue} FCFA</strong>. Renseignez la référence unique de votre transaction.
+        Prix catalogue : <strong>{prixCatalogue} FCFA</strong>.
+        {moyen === 'PAYDUNYA'
+          ? ' Vous serez redirigé vers PayDunya (Burkina Faso et UEMOA) pour payer en ligne.'
+          : ' Renseignez la référence unique de votre transaction.'}
       </p>
       {!hasDomicileGps && (
         <p role="alert" style={{ fontSize: '0.88em', color: 'var(--danger)', marginBottom: 12 }}>
@@ -257,17 +273,19 @@ export default function PaymentPanel({
             ))}
           </select>
         </div>
-        <div className="form-field">
-          <label className="form-label">Référence externe</label>
-          <input
-            type="text"
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            placeholder="Ex. code opérateur / référence virement"
-            required
-            maxLength={200}
-          />
-        </div>
+        {moyen !== 'PAYDUNYA' && (
+          <div className="form-field">
+            <label className="form-label">Référence externe</label>
+            <input
+              type="text"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="Ex. code opérateur / référence virement"
+              required
+              maxLength={200}
+            />
+          </div>
+        )}
         <div className="form-field">
           <label className="form-label">Prix unitaire négocié (optionnel)</label>
           <input

@@ -17,6 +17,10 @@ export type UserDtoJson = {
   idtypeVendeur?: number
   libtypeVendeur?: string
   typeEnginLivreur?: string | null
+  /** Vendeur : annonces visibles sur le marché international. */
+  vendeurInternational?: boolean
+  vendeurCertifieJusqua?: string | null
+  vendeurCertifieActif?: boolean | null
   dateupdate?: string
 }
 
@@ -35,6 +39,7 @@ export type RoleUpgradeRequestDtoJson = {
   decidedAt?: string | null
   fichierCnib?: string
   fichierPhoto?: string
+  vendeurInternational?: boolean
 }
 
 /** Admin / détail complet (montants possibles). */
@@ -190,6 +195,10 @@ export type ArticleDtoJson = {
   idVendeur?: number
   vendeurNom?: string
   vendeurPrenom?: string
+  vendeurInternational?: boolean
+  vendeurNoteMoyenne?: number | null
+  vendeurNombreAvis?: number
+  vendeurCertifieActif?: boolean
   blocked?: boolean
   warningMessage?: string | null
   viewCount?: number

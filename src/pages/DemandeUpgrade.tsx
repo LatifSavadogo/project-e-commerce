@@ -29,6 +29,7 @@ export default function DemandeUpgrade() {
   const [typeEnginLivreur, setTypeEnginLivreur] = useState<'MOTO' | 'VEHICULE'>('MOTO')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
+  const [vendeurInternational, setVendeurInternational] = useState(false)
   const [cnib, setCnib] = useState<File | null>(null)
   const [photo, setPhoto] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -94,7 +95,10 @@ export default function DemandeUpgrade() {
     fd.append('photo', photo)
     if (latitude.trim()) fd.append('latitude', latitude.trim().replace(',', '.'))
     if (longitude.trim()) fd.append('longitude', longitude.trim().replace(',', '.'))
-    if (roleDemande === 'VENDEUR') fd.append('idtypeVendeur', String(idtypeVendeur))
+    if (roleDemande === 'VENDEUR') {
+      fd.append('idtypeVendeur', String(idtypeVendeur))
+      fd.append('vendeurInternational', vendeurInternational ? 'true' : 'false')
+    }
     if (roleDemande === 'LIVREUR') fd.append('typeEnginLivreur', typeEnginLivreur)
 
     setSubmitting(true)
@@ -208,6 +212,22 @@ export default function DemandeUpgrade() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="form-field" style={{ marginBottom: 4 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: '0.95rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={vendeurInternational}
+                    onChange={(e) => setVendeurInternational(e.target.checked)}
+                    style={{ marginTop: 3 }}
+                  />
+                  <span>
+                    <strong>Compte vendeur international</strong>
+                    <span className="meta" style={{ display: 'block', marginTop: 4, fontSize: '0.88rem' }}>
+                      Vos annonces seront visibles sur le marché international (validation admin inchangée).
+                    </span>
+                  </span>
+                </label>
               </div>
               <div className="form-field">
                 <span className="form-label">

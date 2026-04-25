@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
@@ -7,10 +7,15 @@ import TypeArticleFilter from '../components/TypeArticleFilter'
 import { useProducts } from '../contexts/ProductContext'
 
 export default function Listings() {
-  const { products, productsLoading } = useProducts()
+  const { products, productsLoading, refreshProducts } = useProducts()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
+  const international = searchParams.get('international') === '1'
+
+  useEffect(() => {
+    void refreshProducts(international ? 'international' : 'all')
+  }, [international, refreshProducts])
 
   const searchRaw = (searchParams.get('q') || '').trim()
   const searchLower = searchRaw.toLowerCase()
@@ -44,10 +49,19 @@ export default function Listings() {
 
   return (
     <section className="container">
-      <h1>Parcourir le catalogue</h1>
+      <h1>{international ? 'Marché international' : 'Parcourir le catalogue'}</h1>
       <p className="meta" style={{ marginTop: 8 }}>
-        Découvrez les articles mis en vente. Utilisez la recherche dans l’en-tête pour filtrer par mot-clé.
+        {international
+          ? 'Annonces publiées uniquement par les vendeurs inscrits sur le marché international.'
+          : 'Découvrez les articles mis en vente. Utilisez la recherche dans l’en-tête pour filtrer par mot-clé.'}
       </p>
+      {international && (
+        <p className="meta" style={{ marginTop: 10 }}>
+          <button type="button" className="link-button" onClick={() => navigate('/listings')} style={{ padding: 0 }}>
+            Voir tout le catalogue
+          </button>
+        </p>
+      )}
       {productsLoading && <p className="meta">Chargement du catalogue…</p>}
 
       {searchRaw && (
@@ -87,7 +101,9 @@ export default function Listings() {
                   ? 'Articles correspondant au type sélectionné'
                   : searchLower
                     ? 'Affinez avec le filtre par type ci-dessous si besoin'
-                    : 'Articles publiés par les vendeurs'}
+                    : international
+                      ? 'Vendeurs internationaux'
+                      : 'Articles publiés par les vendeurs'}
               </p>
             </div>
           </div>
@@ -132,7 +148,11 @@ export default function Listings() {
           padding: '40px 20px',
           color: 'var(--muted)'
         }}>
-          <p>Aucune annonce récente. Soyez le premier à publier !</p>
+          <p>
+            {international
+              ? 'Aucune annonce sur le marché international pour le moment.'
+              : 'Aucune annonce récente. Soyez le premier à publier !'}
+          </p>
         </div>
       )}
     </section>

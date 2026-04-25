@@ -50,12 +50,12 @@ export default function AdminProducts() {
 
   const syncAfterMutation = async () => {
     await loadAdminCatalog()
-    await refreshProducts()
+    await refreshProducts('all')
   }
 
   const handleRefresh = () => {
     void loadAdminCatalog()
-    void refreshProducts()
+    void refreshProducts('all')
     const btn = document.getElementById('refresh-btn')
     if (btn) {
       btn.style.transform = 'rotate(360deg)'

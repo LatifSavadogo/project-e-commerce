@@ -220,6 +220,45 @@ export default function ProductDetail() {
             {priceDisplay}
           </div>
 
+          {product.sellerId && (
+            <div
+              style={{
+                marginBottom: 20,
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: '10px 14px',
+                fontSize: '0.95rem',
+                color: 'var(--muted)',
+              }}
+            >
+              {product.sellerCertified && (
+                <span
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+                    color: 'var(--accent)',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                  }}
+                >
+                  Vendeur certifié
+                </span>
+              )}
+              {product.sellerRatingCount != null && product.sellerRatingCount > 0 && product.sellerRatingAvg != null ? (
+                <span aria-label={`Note vendeur ${product.sellerRatingAvg} sur 5`}>
+                  {'★'.repeat(Math.round(product.sellerRatingAvg))}
+                  <span style={{ marginLeft: 6 }}>
+                    {product.sellerRatingAvg.toFixed(1)} / 5 — {product.sellerRatingCount} avis
+                  </span>
+                </span>
+              ) : (
+                <span>Pas encore d’avis sur ce vendeur</span>
+              )}
+            </div>
+          )}
+
           {product.description && (
             <div style={{ marginBottom: 24 }}>
               <h3 style={{ fontSize: '1.2em', marginBottom: 12, color: 'var(--text)' }}>Description</h3>

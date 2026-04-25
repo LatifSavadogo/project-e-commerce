@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react'
 import type { ArticleDtoJson } from '../types/backend'
 import {
   fetchArticles,
@@ -147,6 +147,13 @@ export type Product = {
   hasWarning?: boolean
   warningMessage?: string
   sellerId?: string
+  /** Vendeur international (badge catalogue). */
+  sellerInternational?: boolean
+  /** Moyenne avis 1–5 (null si aucun avis). */
+  sellerRatingAvg?: number | null
+  sellerRatingCount?: number
+  /** Abonnement « vendeur certifié » actif. */
+  sellerCertified?: boolean
   views?: number
   country?: string
   city?: string
@@ -178,6 +185,10 @@ export function mapArticleDto(a: ArticleDtoJson): Product {
     category: a.typearticle,
     idtype: a.idtype,
     sellerId: a.idVendeur != null ? String(a.idVendeur) : undefined,
+    sellerInternational: a.vendeurInternational === true,
+    sellerRatingAvg: a.vendeurNoteMoyenne ?? null,
+    sellerRatingCount: a.vendeurNombreAvis ?? 0,
+    sellerCertified: a.vendeurCertifieActif === true,
     views: a.viewCount,
     isBlocked: a.blocked,
     warningMessage: a.warningMessage || undefined,
@@ -190,7 +201,8 @@ type ProductContextType = {
   products: Product[]
   productsLoading: boolean
   typeArticles: TypeArticleOption[]
-  refreshProducts: () => Promise<void>
+  /** Sans argument : recharge selon le dernier mode (tout le catalogue ou international). */
+  refreshProducts: (mode?: 'all' | 'international') => Promise<void>
   addProduct: (input: {
     title: string
     price: number
@@ -214,11 +226,19 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [typeArticles, setTypeArticles] = useState<TypeArticleOption[]>([])
+  const catalogModeRef = useRef<'all' | 'international'>('all')
 
-  const refreshProducts = useCallback(async () => {
+  const refreshProducts = useCallback(async (mode?: 'all' | 'international') => {
+    if (mode !== undefined) {
+      catalogModeRef.current = mode
+    }
     setProductsLoading(true)
     try {
-      const [articlesRes, typesRes] = await Promise.allSettled([fetchArticles(), fetchTypeArticles()])
+      const intl = catalogModeRef.current === 'international'
+      const [articlesRes, typesRes] = await Promise.allSettled([
+        fetchArticles(intl ? { international: true } : {}),
+        fetchTypeArticles(),
+      ])
       if (articlesRes.status === 'fulfilled') {
         setProducts(articlesRes.value.map(mapArticleDto))
       } else {
@@ -241,10 +261,6 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       setProductsLoading(false)
     }
   }, [])
-
-  useEffect(() => {
-    void refreshProducts()
-  }, [refreshProducts])
 
   const addProduct = useCallback(
     async (input: {

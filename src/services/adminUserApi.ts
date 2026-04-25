@@ -10,6 +10,7 @@ export type AdminUserPatchBody = {
   idrole?: number
   idpays?: number
   idtypeVendeur?: number
+  vendeurInternational?: boolean
 }
 
 export async function patchAdminUserProfile(

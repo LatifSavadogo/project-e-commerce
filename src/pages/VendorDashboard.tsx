@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowLeft, BarChart3, CreditCard, MessageSquare, Package, Plus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,6 +17,7 @@ import { dateFromDto } from '../utils/dateFromDto'
 const VendorSalesCharts = lazy(() => import('../components/vendor/VendorSalesCharts'))
 
 const MOYEN_LABEL: Record<string, string> = {
+  PAYDUNYA: 'PayDunya',
   ORANGE_MONEY: 'Orange Money',
   MOOV_MONEY: 'Moov Money',
   VIREMENT: 'Virement',
@@ -166,24 +167,39 @@ export default function VendorDashboard() {
         }}
       >
         <h1 style={{ margin: 0 }}>Tableau de bord vendeur</h1>
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--border)',
-            padding: '8px 16px',
-            borderRadius: 10,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            color: 'var(--text)',
-            cursor: 'pointer',
-          }}
-        >
-          <ArrowLeft {...iconSm} aria-hidden />
-          Retour
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <Link
+            to="/vendor/certification"
+            style={{
+              padding: '8px 16px',
+              borderRadius: 10,
+              border: '1px solid var(--accent)',
+              color: 'var(--accent)',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            Vendeur certifié
+          </Link>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              padding: '8px 16px',
+              borderRadius: 10,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              color: 'var(--text)',
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowLeft {...iconSm} aria-hidden />
+            Retour
+          </button>
+        </div>
       </div>
 
       <div

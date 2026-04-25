@@ -43,7 +43,7 @@ export default function Chat() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
-  const { products } = useProducts()
+  const { products, refreshProducts } = useProducts()
   const {
     conversations,
     activeConversationId,
@@ -63,6 +63,10 @@ export default function Chat() {
   const [payOkId, setPayOkId] = useState<number | null>(null)
   const [finalDecisionBusy, setFinalDecisionBusy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    void refreshProducts('all')
+  }, [refreshProducts])
 
   useEffect(() => {
     const productId = searchParams.get('productId')

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Package, Plus, Sparkles } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import { iconLg, iconSm } from '../components/ui/iconProps'
@@ -51,7 +52,11 @@ const featured: Product[] = [
 
 export default function Home() {
   const { user } = useAuth()
-  const { products } = useProducts()
+  const { products, refreshProducts } = useProducts()
+
+  useEffect(() => {
+    void refreshProducts('all')
+  }, [refreshProducts])
 
   const recentProducts = [...products].sort((a, b) => {
     return parseInt(b.id, 10) - parseInt(a.id, 10)

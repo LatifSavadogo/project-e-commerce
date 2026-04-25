@@ -1,8 +1,10 @@
 import { apiFetch, apiJson } from './apiClient'
 import type { ArticleDtoJson } from '../types/backend'
 
-export async function fetchArticles(): Promise<ArticleDtoJson[]> {
-  return apiJson<ArticleDtoJson[]>('/api/v1/articles')
+export async function fetchArticles(opts?: { international?: boolean }): Promise<ArticleDtoJson[]> {
+  const q =
+    opts?.international === true ? '?international=true' : ''
+  return apiJson<ArticleDtoJson[]>(`/api/v1/articles${q}`)
 }
 
 /** Toutes les annonces (y compris bloquées) — admin / super-admin. */

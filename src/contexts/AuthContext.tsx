@@ -26,6 +26,10 @@ export type User = {
   longitude?: number | null
   /** Fichier pièce d’identité (nom stocké côté serveur), si présent. */
   cnib?: string | null
+  /** Vendeur : compte marché international. */
+  vendeurInternational?: boolean
+  vendeurCertifieActif?: boolean
+  vendeurCertifieJusqua?: string | null
 }
 
 export function mapUserDtoToUser(d: UserDtoJson): User {
@@ -52,6 +56,9 @@ export function mapUserDtoToUser(d: UserDtoJson): User {
     latitude: d.latitude ?? undefined,
     longitude: d.longitude ?? undefined,
     cnib: d.cnib,
+    vendeurInternational: d.vendeurInternational === true,
+    vendeurCertifieActif: d.vendeurCertifieActif === true,
+    vendeurCertifieJusqua: d.vendeurCertifieJusqua ?? undefined,
   }
 }
 

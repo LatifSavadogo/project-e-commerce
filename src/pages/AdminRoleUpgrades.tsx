@@ -147,6 +147,9 @@ export default function AdminRoleUpgrades() {
                     <strong>{r.emailDemandeur}</strong>
                   </div>
                   {r.idtypeVendeur != null && <div>Catégorie vendeur (id) : {r.idtypeVendeur}</div>}
+                  {r.roleDemande === 'VENDEUR' && (
+                    <div>Marché international : {r.vendeurInternational ? 'oui' : 'non'}</div>
+                  )}
                   {r.typeEnginLivreur && <div>Engin : {r.typeEnginLivreur}</div>}
                   {(r.latitude != null || r.longitude != null) && (
                     <div>

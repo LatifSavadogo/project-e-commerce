@@ -27,6 +27,7 @@ export default function AdminUsers() {
   const [editRoleId, setEditRoleId] = useState('')
   const [editPaysId, setEditPaysId] = useState('')
   const [editTypeId, setEditTypeId] = useState('')
+  const [editVendeurInternational, setEditVendeurInternational] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
 
   const isSuperAdmin = user?.librole?.toUpperCase() === 'SUPER_ADMIN'
@@ -81,6 +82,7 @@ export default function AdminUsers() {
     setEditRoleId(u.idrole != null ? String(u.idrole) : '')
     setEditPaysId(u.idpays != null ? String(u.idpays) : '')
     setEditTypeId(u.idtypeVendeur != null ? String(u.idtypeVendeur) : '')
+    setEditVendeurInternational(!!u.vendeurInternational)
   }
 
   const roleOptions = roles.filter((r) => {
@@ -92,7 +94,7 @@ export default function AdminUsers() {
   const saveProfile = async () => {
     if (!profileTarget) return
     const uid = Number(profileTarget.id)
-    const body: { idrole?: number; idpays?: number; idtypeVendeur?: number } = {}
+    const body: { idrole?: number; idpays?: number; idtypeVendeur?: number; vendeurInternational?: boolean } = {}
     if (editRoleId) {
       const nr = Number(editRoleId)
       if (nr !== profileTarget.idrole) body.idrole = nr
@@ -112,6 +114,9 @@ export default function AdminUsers() {
       if (editTypeId) {
         const nt = Number(editTypeId)
         if (nt !== profileTarget.idtypeVendeur) body.idtypeVendeur = nt
+      }
+      if (editVendeurInternational !== !!profileTarget.vendeurInternational) {
+        body.vendeurInternational = editVendeurInternational
       }
     }
     if (Object.keys(body).length === 0) {
@@ -291,17 +296,27 @@ export default function AdminUsers() {
                 </select>
               </div>
               {roles.find((r) => r.idrole === Number(editRoleId))?.librole.toUpperCase() === 'VENDEUR' && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85em' }}>Catégorie vendeur</label>
-                  <select value={editTypeId} onChange={(e) => setEditTypeId(e.target.value)} style={{ width: '100%' }}>
-                    <option value="">—</option>
-                    {types.map((t) => (
-                      <option key={t.idtype} value={t.idtype}>
-                        {t.libtype}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85em' }}>Catégorie vendeur</label>
+                    <select value={editTypeId} onChange={(e) => setEditTypeId(e.target.value)} style={{ width: '100%' }}>
+                      <option value="">—</option>
+                      {types.map((t) => (
+                        <option key={t.idtype} value={t.idtype}>
+                          {t.libtype}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.9em', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editVendeurInternational}
+                      onChange={(e) => setEditVendeurInternational(e.target.checked)}
+                    />
+                    Vendeur international (marché international)
+                  </label>
+                </>
               )}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>

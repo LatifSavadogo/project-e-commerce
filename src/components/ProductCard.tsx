@@ -51,6 +51,25 @@ export default function ProductCard({ p }: { p: Product }) {
       <article className="card product-card">
         <div className="product-card__media">
           <img src={p.image} alt={p.title} className="product-card__img" />
+          {p.sellerInternational ? (
+            <span
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                padding: '4px 8px',
+                borderRadius: 6,
+                background: 'color-mix(in srgb, var(--accent) 88%, transparent)',
+                color: 'var(--surface)',
+              }}
+            >
+              International
+            </span>
+          ) : null}
         </div>
         <div className="product-card__body">
           <h3 className="product-card__title">{p.title}</h3>

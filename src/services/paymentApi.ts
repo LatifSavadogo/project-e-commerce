@@ -1,7 +1,7 @@
 import { apiFetch, apiJson } from './apiClient'
 import type { ClientLivraisonQrDtoJson, CommandeSuiviDtoJson } from '../types/backend'
 
-export type PaymentMethod = 'ORANGE_MONEY' | 'MOOV_MONEY' | 'VIREMENT' | 'ESPECES'
+export type PaymentMethod = 'ORANGE_MONEY' | 'MOOV_MONEY' | 'VIREMENT' | 'ESPECES' | 'PAYDUNYA'
 
 export type PaymentResultDto = {
   idtransaction: number

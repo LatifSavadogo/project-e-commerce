@@ -15,12 +15,14 @@ import {
   LocateFixed,
 } from 'lucide-react'
 import { fetchMyPurchases, fetchMySales, downloadPaymentReceipt, type PaymentResultDto } from '../services/paymentApi'
+import { postTransactionSellerRating } from '../services/sellerRatingApi'
 import { dateFromDto } from '../utils/dateFromDto'
 import { iconSm } from '../components/ui/iconProps'
 import LivraisonBuyerModal from '../components/LivraisonBuyerModal'
 import DomicileLocationMapModal from '../components/DomicileLocationMapModal'
 
 const MOYEN_LABEL: Record<string, string> = {
+  PAYDUNYA: 'PayDunya',
   ORANGE_MONEY: 'Orange Money',
   MOOV_MONEY: 'Moov Money',
   VIREMENT: 'Virement',
@@ -68,6 +70,8 @@ export default function Profile() {
   const [buyerModal, setBuyerModal] = useState<{ mode: 'qr' | 'suivi'; transactionId: number } | null>(null)
   const [mapModalOpen, setMapModalOpen] = useState(false)
   const [gpsOk, setGpsOk] = useState<string | null>(null)
+  const [ratingStars, setRatingStars] = useState<Record<number, string>>({})
+  const [ratingBusy, setRatingBusy] = useState<number | null>(null)
 
   const loadPayments = useCallback(async () => {
     if (!user) return
@@ -153,6 +157,31 @@ export default function Profile() {
                 label="Catégorie vendeur"
                 value={user.libtypeVendeur || user.productType || '—'}
                 icon={<Store {...iconSm} aria-hidden />}
+              />
+            )}
+            {user.accountType === 'seller' && (
+              <AccountField
+                label="Marché international"
+                value={
+                  user.vendeurInternational
+                    ? 'Oui — vos annonces figurent sur le catalogue international'
+                    : 'Non — catalogue général uniquement'
+                }
+                icon={<Shield {...iconSm} aria-hidden />}
+              />
+            )}
+            {user.accountType === 'seller' && (
+              <AccountField
+                label="Vendeur certifié"
+                value={
+                  user.vendeurCertifieActif && user.vendeurCertifieJusqua
+                    ? `Oui — jusqu’au ${new Date(user.vendeurCertifieJusqua).toLocaleString('fr-FR', {
+                        dateStyle: 'long',
+                        timeStyle: 'short',
+                      })}`
+                    : 'Non — souscrire depuis le dashboard (certification PayDunya)'
+                }
+                icon={<Shield {...iconSm} aria-hidden />}
               />
             )}
             {user.country && (
@@ -317,6 +346,60 @@ export default function Profile() {
                   <button type="button" className="link-button" onClick={() => void handleReceipt(p.idtransaction)}>
                     Reçu PDF
                   </button>
+                  {p.livraisonStatut === 'LIVREE' &&
+                    typeof sessionStorage !== 'undefined' &&
+                    !sessionStorage.getItem(`seller_rating_done_${p.idtransaction}`) && (
+                      <div
+                        style={{
+                          marginTop: 12,
+                          paddingTop: 12,
+                          borderTop: '1px solid var(--border)',
+                          fontSize: '0.88rem',
+                        }}
+                      >
+                        <div style={{ marginBottom: 6, fontWeight: 600 }}>Noter le vendeur</div>
+                        <label style={{ display: 'block', marginBottom: 6 }}>
+                          Étoiles (1 à 5){' '}
+                          <input
+                            type="number"
+                            min={1}
+                            max={5}
+                            value={ratingStars[p.idtransaction] ?? '5'}
+                            onChange={(e) =>
+                              setRatingStars((prev) => ({ ...prev, [p.idtransaction]: e.target.value }))
+                            }
+                            style={{ width: 64, marginLeft: 8 }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="link-button"
+                          disabled={ratingBusy === p.idtransaction}
+                          onClick={() => {
+                            void (async () => {
+                              const raw = (ratingStars[p.idtransaction] ?? '5').trim()
+                              const stars = parseInt(raw, 10)
+                              if (!stars || stars < 1 || stars > 5) {
+                                alert('Indiquez une note entre 1 et 5.')
+                                return
+                              }
+                              setRatingBusy(p.idtransaction)
+                              try {
+                                await postTransactionSellerRating(p.idtransaction, { stars })
+                                sessionStorage.setItem(`seller_rating_done_${p.idtransaction}`, '1')
+                                await loadPayments()
+                              } catch (e) {
+                                alert(e instanceof Error ? e.message : 'Envoi impossible')
+                              } finally {
+                                setRatingBusy(null)
+                              }
+                            })()
+                          }}
+                        >
+                          {ratingBusy === p.idtransaction ? 'Envoi…' : 'Envoyer la note'}
+                        </button>
+                      </div>
+                    )}
                 </div>
               ))
             )}
