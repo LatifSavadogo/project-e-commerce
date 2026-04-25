@@ -101,6 +101,7 @@ public class UserService {
 			target.setRole(newRole);
 			if (!RoleNames.VENDEUR.equalsIgnoreCase(nr)) {
 				target.setCategorieVendeur(null);
+				target.setVendeurInternational(false);
 			}
 			if (!RoleNames.LIVREUR.equalsIgnoreCase(nr)) {
 				target.setTypeEnginLivreur(null);
@@ -132,6 +133,12 @@ public class UserService {
 		}
 		if (dto.getLongitude() != null) {
 			target.setLongitude(dto.getLongitude());
+		}
+		if (dto.getVendeurInternational() != null) {
+			if (target.getRole() == null || !RoleNames.VENDEUR.equalsIgnoreCase(target.getRole().getLibrole())) {
+				throw new IllegalStateException("Statut international réservé aux comptes vendeur.");
+			}
+			target.setVendeurInternational(Boolean.TRUE.equals(dto.getVendeurInternational()));
 		}
 		if (target.getRole() != null && RoleNames.VENDEUR.equalsIgnoreCase(target.getRole().getLibrole())) {
 			GeoCoordinates.requireLatLng(target.getLatitude(), target.getLongitude(),

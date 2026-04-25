@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,32 +38,77 @@ public class ArticleService {
 	private final ArticleRepository articleRepository;
 	private final TypeArticleRepository typeArticleRepository;
 	private final ArticleImageRepository articleImageRepository;
+	private final SellerRatingService sellerRatingService;
 
 	public ArticleService(ArticleRepository articleRepository, TypeArticleRepository typeArticleRepository,
-			ArticleImageRepository articleImageRepository) {
+			ArticleImageRepository articleImageRepository, SellerRatingService sellerRatingService) {
 		this.articleRepository = articleRepository;
 		this.typeArticleRepository = typeArticleRepository;
 		this.articleImageRepository = articleImageRepository;
+		this.sellerRatingService = sellerRatingService;
 	}
 
-	public List<ArticleDTO> listPublicCatalog() {
-		return articleRepository.findByBlockedIsFalseOrderByDateupdateDesc().stream()
-				.map(this::toDtoWithImages)
-				.toList();
+	public List<ArticleDTO> listPublicCatalog(Boolean internationalOnly) {
+		List<Article> source = Boolean.TRUE.equals(internationalOnly)
+				? articleRepository.findByBlockedIsFalseAndVendeur_VendeurInternationalIsTrueOrderByDateupdateDesc()
+				: articleRepository.findByBlockedIsFalseOrderByDateupdateDesc();
+		List<ArticleDTO> dtos = new ArrayList<>(source.size());
+		for (Article a : source) {
+			dtos.add(toDtoWithImagesBasic(a));
+		}
+		enrichVendorBatch(source, dtos);
+		return dtos;
 	}
 
 	public List<ArticleDTO> listAllForAdmin() {
-		return articleRepository.findAllByOrderByDateupdateDesc().stream()
-				.map(this::toDtoWithImages)
-				.toList();
+		List<Article> source = articleRepository.findAllByOrderByDateupdateDesc();
+		List<ArticleDTO> dtos = new ArrayList<>(source.size());
+		for (Article a : source) {
+			dtos.add(toDtoWithImagesBasic(a));
+		}
+		enrichVendorBatch(source, dtos);
+		return dtos;
 	}
 
 	public ArticleDTO toDtoWithImages(Article article) {
+		ArticleDTO dto = toDtoWithImagesBasic(article);
+		enrichVendorBatch(List.of(article), List.of(dto));
+		return dto;
+	}
+
+	private ArticleDTO toDtoWithImagesBasic(Article article) {
 		if (article.getIdarticle() == null) {
 			return ArticleDTO.fromEntity(article, List.of());
 		}
 		List<ArticleImage> imgs = articleImageRepository.findByArticle_IdarticleOrderBySortOrderAsc(article.getIdarticle());
 		return ArticleDTO.fromEntity(article, imgs);
+	}
+
+	private void enrichVendorBatch(List<Article> articles, List<ArticleDTO> dtos) {
+		if (articles.isEmpty()) {
+			return;
+		}
+		Set<Integer> ids = sellerRatingService.collectSellerIds(articles);
+		Map<Integer, double[]> agg = sellerRatingService.averageStarsBySellerIds(ids);
+		LocalDateTime now = LocalDateTime.now();
+		for (int i = 0; i < articles.size(); i++) {
+			Article a = articles.get(i);
+			ArticleDTO d = dtos.get(i);
+			User v = a.getVendeur();
+			if (v == null) {
+				continue;
+			}
+			double[] z = agg.get(v.getIduser());
+			if (z != null && z[1] > 0) {
+				d.setVendeurNoteMoyenne(z[0]);
+				d.setVendeurNombreAvis((int) Math.round(z[1]));
+			} else {
+				d.setVendeurNoteMoyenne(null);
+				d.setVendeurNombreAvis(0);
+			}
+			d.setVendeurCertifieActif(
+					v.getVendeurCertifieJusqua() != null && v.getVendeurCertifieJusqua().isAfter(now));
+		}
 	}
 
 	@Transactional

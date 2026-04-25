@@ -16,6 +16,9 @@ public class AdminUserPatchDTO {
 	private Double latitude;
 	private Double longitude;
 
+	/** Réservé aux comptes vendeur ; null = inchangé. */
+	private Boolean vendeurInternational;
+
 	public Integer getIdrole() {
 		return idrole;
 	}
@@ -62,5 +65,13 @@ public class AdminUserPatchDTO {
 
 	public void setLongitude(Double longitude) {
 		this.longitude = longitude;
+	}
+
+	public Boolean getVendeurInternational() {
+		return vendeurInternational;
+	}
+
+	public void setVendeurInternational(Boolean vendeurInternational) {
+		this.vendeurInternational = vendeurInternational;
 	}
 }

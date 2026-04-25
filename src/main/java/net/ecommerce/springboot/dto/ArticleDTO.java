@@ -36,6 +36,13 @@ public class ArticleDTO {
     private Integer idVendeur;
     private String vendeurNom;
     private String vendeurPrenom;
+    /** Présent si vendeur connu : annonces du marché international. */
+    private Boolean vendeurInternational;
+    /** Moyenne des étoiles (1–5) ; null si aucun avis. */
+    private Double vendeurNoteMoyenne;
+    private int vendeurNombreAvis;
+    /** Badge vendeur certifié (abonnement actif). */
+    private boolean vendeurCertifieActif;
     private boolean blocked;
     private String warningMessage;
     private int viewCount;
@@ -91,6 +98,9 @@ public class ArticleDTO {
             dto.setIdVendeur(article.getVendeur().getIduser());
             dto.setVendeurNom(article.getVendeur().getNom());
             dto.setVendeurPrenom(article.getVendeur().getPrenom());
+            dto.setVendeurInternational(article.getVendeur().isVendeurInternational());
+            dto.setVendeurCertifieActif(article.getVendeur().getVendeurCertifieJusqua() != null
+                    && article.getVendeur().getVendeurCertifieJusqua().isAfter(java.time.LocalDateTime.now()));
         }
         dto.setBlocked(article.isBlocked());
         dto.setWarningMessage(article.getWarningMessage());
@@ -214,6 +224,38 @@ public class ArticleDTO {
 
     public void setVendeurPrenom(String vendeurPrenom) {
         this.vendeurPrenom = vendeurPrenom;
+    }
+
+    public Boolean getVendeurInternational() {
+        return vendeurInternational;
+    }
+
+    public void setVendeurInternational(Boolean vendeurInternational) {
+        this.vendeurInternational = vendeurInternational;
+    }
+
+    public Double getVendeurNoteMoyenne() {
+        return vendeurNoteMoyenne;
+    }
+
+    public void setVendeurNoteMoyenne(Double vendeurNoteMoyenne) {
+        this.vendeurNoteMoyenne = vendeurNoteMoyenne;
+    }
+
+    public int getVendeurNombreAvis() {
+        return vendeurNombreAvis;
+    }
+
+    public void setVendeurNombreAvis(int vendeurNombreAvis) {
+        this.vendeurNombreAvis = vendeurNombreAvis;
+    }
+
+    public boolean isVendeurCertifieActif() {
+        return vendeurCertifieActif;
+    }
+
+    public void setVendeurCertifieActif(boolean vendeurCertifieActif) {
+        this.vendeurCertifieActif = vendeurCertifieActif;
     }
 
     public boolean isBlocked() {

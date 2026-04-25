@@ -60,8 +60,9 @@ public class ArticleController {
 	}
 
 	@GetMapping("/articles")
-	public ResponseEntity<List<ArticleDTO>> getAllArticles() {
-		return ResponseEntity.ok(articleService.listPublicCatalog());
+	public ResponseEntity<List<ArticleDTO>> getAllArticles(
+			@RequestParam(name = "international", required = false) Boolean international) {
+		return ResponseEntity.ok(articleService.listPublicCatalog(international));
 	}
 
 	@GetMapping("/articles/{id}")

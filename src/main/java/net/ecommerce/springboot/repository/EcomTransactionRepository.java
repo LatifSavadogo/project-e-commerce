@@ -13,6 +13,8 @@ public interface EcomTransactionRepository extends JpaRepository<EcomTransaction
 
 	boolean existsByRefExterneHash(String refExterneHash);
 
+	Optional<EcomTransaction> findFirstByRefExterneHash(String refExterneHash);
+
 	@Query("select t from EcomTransaction t left join fetch t.livraison l left join fetch l.livreur where t.idtransaction = :id")
 	Optional<EcomTransaction> findByIdWithLivraisonAndLivreur(@Param("id") Integer id);
 

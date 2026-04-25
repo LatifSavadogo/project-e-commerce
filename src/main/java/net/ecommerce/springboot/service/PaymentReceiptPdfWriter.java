@@ -341,6 +341,7 @@ public final class PaymentReceiptPdfWriter {
 			case MOOV_MONEY -> "Moov Money";
 			case VIREMENT -> "Virement bancaire";
 			case ESPECES -> "Espèces";
+			case PAYDUNYA -> "PayDunya (en ligne)";
 		};
 	}
 }

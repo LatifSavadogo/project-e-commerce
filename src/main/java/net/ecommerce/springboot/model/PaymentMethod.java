@@ -4,5 +4,7 @@ public enum PaymentMethod {
 	ORANGE_MONEY,
 	MOOV_MONEY,
 	VIREMENT,
-	ESPECES
+	ESPECES,
+	/** Paiement en ligne via PayDunya (Orange, Moov, carte… selon configuration PayDunya). */
+	PAYDUNYA
 }

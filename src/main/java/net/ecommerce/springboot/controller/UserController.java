@@ -143,6 +143,7 @@ public class UserController {
 			@RequestParam(required = false) String typeEnginLivreur,
 			@RequestParam(required = false) String latitude,
 			@RequestParam(required = false) String longitude,
+			@RequestParam(required = false) String vendeurInternational,
 			@RequestParam("cnib") MultipartFile cnibFile) {
 		try {
 			if (cnibFile.isEmpty()) {
@@ -197,6 +198,7 @@ public class UserController {
 					}
 					user.setLatitude(lat);
 					user.setLongitude(lon);
+					user.setVendeurInternational(isTruthyMultipartParam(vendeurInternational));
 				}
 				if (RoleNames.LIVREUR.equalsIgnoreCase(role.getLibrole())) {
 					if (typeEnginLivreur == null || typeEnginLivreur.isBlank()) {
@@ -233,6 +235,7 @@ public class UserController {
 			@RequestParam(required = false) String typeEnginLivreur,
 			@RequestParam(required = false) String latitude,
 			@RequestParam(required = false) String longitude,
+			@RequestParam(required = false) String vendeurInternational,
 			@RequestParam(value = "cnib", required = false) MultipartFile cnibFile) {
 		try {
 			User user = userRepository.findById(iduser)
@@ -272,6 +275,7 @@ public class UserController {
 					}
 				} else {
 					user.setCategorieVendeur(null);
+					user.setVendeurInternational(false);
 				}
 				if (RoleNames.LIVREUR.equalsIgnoreCase(role.getLibrole())) {
 					if (typeEnginLivreur != null && !typeEnginLivreur.isBlank()) {
@@ -317,6 +321,10 @@ public class UserController {
 			if (lonPatch != null) {
 				user.setLongitude(lonPatch);
 			}
+			if (vendeurInternational != null && user.getRole() != null
+					&& RoleNames.VENDEUR.equalsIgnoreCase(user.getRole().getLibrole())) {
+				user.setVendeurInternational(isTruthyMultipartParam(vendeurInternational));
+			}
 			if (user.getRole() != null && RoleNames.VENDEUR.equalsIgnoreCase(user.getRole().getLibrole())) {
 				try {
 					GeoCoordinates.requireLatLng(user.getLatitude(), user.getLongitude(),
@@ -353,6 +361,7 @@ public class UserController {
 			String rl = role.getLibrole();
 			if (!RoleNames.VENDEUR.equalsIgnoreCase(rl)) {
 				user.setCategorieVendeur(null);
+				user.setVendeurInternational(false);
 			}
 			if (!RoleNames.LIVREUR.equalsIgnoreCase(rl)) {
 				user.setTypeEnginLivreur(null);
@@ -380,6 +389,12 @@ public class UserController {
 		if (user.getRole() != null && RoleNames.VENDEUR.equalsIgnoreCase(user.getRole().getLibrole())) {
 			GeoCoordinates.requireLatLng(user.getLatitude(), user.getLongitude(),
 					"Un vendeur doit avoir une latitude et une longitude dans le profil.");
+		}
+		if (userDTO.getVendeurInternational() != null) {
+			if (user.getRole() == null || !RoleNames.VENDEUR.equalsIgnoreCase(user.getRole().getLibrole())) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut international réservé aux vendeurs.");
+			}
+			user.setVendeurInternational(Boolean.TRUE.equals(userDTO.getVendeurInternational()));
 		}
 		if (userDTO.getTypeEnginLivreur() != null && !userDTO.getTypeEnginLivreur().isBlank()) {
 			if (user.getRole() == null || !RoleNames.LIVREUR.equalsIgnoreCase(user.getRole().getLibrole())) {
@@ -497,5 +512,13 @@ public class UserController {
 		String fileExtension = getFileExtension(originalFileName);
 		String baseName = originalFileName.substring(0, originalFileName.lastIndexOf('.'));
 		return UUID.randomUUID() + "_" + baseName + "." + fileExtension;
+	}
+
+	private static boolean isTruthyMultipartParam(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return false;
+		}
+		String t = raw.trim();
+		return "true".equalsIgnoreCase(t) || "1".equals(t) || "yes".equalsIgnoreCase(t);
 	}
 }

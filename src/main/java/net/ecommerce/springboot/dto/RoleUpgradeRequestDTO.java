@@ -15,6 +15,7 @@ public class RoleUpgradeRequestDTO {
 	private Double latitude;
 	private Double longitude;
 	private Integer idtypeVendeur;
+	private boolean vendeurInternational;
 	private String typeEnginLivreur;
 	private String adminMotif;
 	private LocalDateTime createdAt;
@@ -37,6 +38,7 @@ public class RoleUpgradeRequestDTO {
 		d.setLatitude(e.getLatitude());
 		d.setLongitude(e.getLongitude());
 		d.setIdtypeVendeur(e.getIdtypeVendeur());
+		d.setVendeurInternational(e.isVendeurInternational());
 		if (e.getTypeEnginLivreur() != null) {
 			d.setTypeEnginLivreur(e.getTypeEnginLivreur().name());
 		}
@@ -110,6 +112,14 @@ public class RoleUpgradeRequestDTO {
 
 	public void setIdtypeVendeur(Integer idtypeVendeur) {
 		this.idtypeVendeur = idtypeVendeur;
+	}
+
+	public boolean isVendeurInternational() {
+		return vendeurInternational;
+	}
+
+	public void setVendeurInternational(boolean vendeurInternational) {
+		this.vendeurInternational = vendeurInternational;
 	}
 
 	public String getTypeEnginLivreur() {

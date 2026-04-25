@@ -47,6 +47,10 @@ public class RoleUpgradeRequest {
 	@Column(name = "idtype_vendeur")
 	private Integer idtypeVendeur;
 
+	/** Demande vendeur : publication sur le marché international après approbation. */
+	@Column(name = "vendeur_international", nullable = false)
+	private boolean vendeurInternational;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "type_engin_livreur", length = 16)
 	private TypeEnginLivreur typeEnginLivreur;
@@ -136,6 +140,14 @@ public class RoleUpgradeRequest {
 
 	public void setIdtypeVendeur(Integer idtypeVendeur) {
 		this.idtypeVendeur = idtypeVendeur;
+	}
+
+	public boolean isVendeurInternational() {
+		return vendeurInternational;
+	}
+
+	public void setVendeurInternational(boolean vendeurInternational) {
+		this.vendeurInternational = vendeurInternational;
 	}
 
 	public TypeEnginLivreur getTypeEnginLivreur() {

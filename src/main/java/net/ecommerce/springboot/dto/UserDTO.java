@@ -56,6 +56,13 @@ private Integer iduser;
     /** MOTO ou VEHICULE pour les livreurs. */
     private String typeEnginLivreur;
 
+    /** Marché international (vendeur). Absent en JSON = pas de changement pour les mises à jour partielles. */
+    private Boolean vendeurInternational;
+
+    /** Fin d’abonnement « vendeur certifié » (null si jamais souscrit ou expiré). */
+    private LocalDateTime vendeurCertifieJusqua;
+    private Boolean vendeurCertifieActif;
+
     private String photoProfil;
 
     private Double latitude;
@@ -108,6 +115,10 @@ private Integer iduser;
         if (user.getTypeEnginLivreur() != null) {
             dto.setTypeEnginLivreur(user.getTypeEnginLivreur().name());
         }
+        dto.setVendeurInternational(user.isVendeurInternational());
+        dto.setVendeurCertifieJusqua(user.getVendeurCertifieJusqua());
+        LocalDateTime until = user.getVendeurCertifieJusqua();
+        dto.setVendeurCertifieActif(until != null && until.isAfter(LocalDateTime.now()));
         
         return dto;
     }
@@ -171,5 +182,29 @@ private Integer iduser;
 
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    public Boolean getVendeurInternational() {
+        return vendeurInternational;
+    }
+
+    public void setVendeurInternational(Boolean vendeurInternational) {
+        this.vendeurInternational = vendeurInternational;
+    }
+
+    public LocalDateTime getVendeurCertifieJusqua() {
+        return vendeurCertifieJusqua;
+    }
+
+    public void setVendeurCertifieJusqua(LocalDateTime vendeurCertifieJusqua) {
+        this.vendeurCertifieJusqua = vendeurCertifieJusqua;
+    }
+
+    public Boolean getVendeurCertifieActif() {
+        return vendeurCertifieActif;
+    }
+
+    public void setVendeurCertifieActif(Boolean vendeurCertifieActif) {
+        this.vendeurCertifieActif = vendeurCertifieActif;
+    }
   
 }

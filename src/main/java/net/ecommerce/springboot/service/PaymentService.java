@@ -142,10 +142,52 @@ public class PaymentService {
 	}
 
 	private static int fraisPourMoyen(PaymentMethod m) {
-		if (m == PaymentMethod.ORANGE_MONEY || m == PaymentMethod.MOOV_MONEY) {
+		if (m == PaymentMethod.ORANGE_MONEY || m == PaymentMethod.MOOV_MONEY || m == PaymentMethod.PAYDUNYA) {
 			return 0;
 		}
 		return 0;
+	}
+
+	/**
+	 * Montant total FCFA pour un nouvel achat (mêmes règles que l’enregistrement), sans référence ni persistance —
+	 * utilisé pour créer une facture PayDunya au bon montant.
+	 */
+	@Transactional(readOnly = true)
+	public int previewMontantTotal(User acheteur, Integer idArticle, int quantite, Integer prixUnitaireNegocie,
+			Integer negotiationMessageId) {
+		User buyer = userRepository.findById(acheteur.getIduser())
+				.orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable : " + acheteur.getIduser()));
+		GeoCoordinates.requireLatLng(buyer.getLatitude(), buyer.getLongitude(),
+				"Renseignez d’abord les coordonnées GPS de votre domicile (Mon compte) avant de payer.");
+		Article article = articleRepository.findById(idArticle)
+				.orElseThrow(() -> new ResourceNotFoundException("Article introuvable : " + idArticle));
+		if (article.isBlocked()) {
+			throw new IllegalStateException("Cet article n'est plus disponible à l'achat.");
+		}
+		if (article.getVendeur() == null) {
+			throw new IllegalStateException("Article sans vendeur associé.");
+		}
+		if (article.getVendeur().getIduser().equals(buyer.getIduser())) {
+			throw new IllegalStateException("Vous ne pouvez pas payer pour votre propre annonce.");
+		}
+		int unit = article.getPrixunitaire();
+		if (prixUnitaireNegocie != null) {
+			if (prixUnitaireNegocie > article.getPrixunitaire()) {
+				throw new IllegalStateException("Le prix négocié ne peut pas dépasser le prix catalogue.");
+			}
+			long ok = chatMessageRepository.countPayableNegotiatedPrice(prixUnitaireNegocie, idArticle,
+					buyer.getIduser(), article.getVendeur().getIduser(), quantite, negotiationMessageId);
+			if (ok < 1) {
+				throw new IllegalStateException(
+						"Aucun accord à ce prix et à cette quantité (offre acceptée ou dernier prix vendeur) pour cet article.");
+			}
+			unit = prixUnitaireNegocie;
+		}
+		long totalLong = (long) unit * quantite;
+		if (totalLong > Integer.MAX_VALUE) {
+			throw new IllegalStateException("Montant total trop élevé.");
+		}
+		return (int) totalLong;
 	}
 
 	public EcomTransaction getTransactionOrThrow(Integer id) {

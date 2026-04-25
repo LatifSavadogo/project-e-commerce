@@ -50,7 +50,8 @@ public class MeRoleUpgradeController {
 			@RequestParam(required = false) String latitude,
 			@RequestParam(required = false) String longitude,
 			@RequestParam(required = false) Integer idtypeVendeur,
-			@RequestParam(required = false) String typeEnginLivreur) {
+			@RequestParam(required = false) String typeEnginLivreur,
+			@RequestParam(required = false) String vendeurInternational) {
 		User u = authService.getCurrentUser();
 		if (u == null) {
 			return ResponseEntity.status(401).body(Map.of("error", "Non authentifié"));
@@ -58,8 +59,9 @@ public class MeRoleUpgradeController {
 		try {
 			Double lat = parseCoord(latitude);
 			Double lon = parseCoord(longitude);
+			boolean intl = isTruthyParam(vendeurInternational);
 			RoleUpgradeRequest saved = roleUpgradeService.submit(u, roleDemande, cnib, photo, lat, lon, idtypeVendeur,
-					typeEnginLivreur);
+					typeEnginLivreur, intl);
 			return ResponseEntity.status(201).body(RoleUpgradeRequestDTO.fromEntity(saved));
 		} catch (IllegalArgumentException | IllegalStateException ex) {
 			return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
@@ -77,5 +79,13 @@ public class MeRoleUpgradeController {
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException("Coordonnée GPS invalide.");
 		}
+	}
+
+	private static boolean isTruthyParam(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return false;
+		}
+		String t = raw.trim();
+		return "true".equalsIgnoreCase(t) || "1".equals(t) || "yes".equalsIgnoreCase(t);
 	}
 }

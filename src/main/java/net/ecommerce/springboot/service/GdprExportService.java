@@ -90,6 +90,9 @@ public class GdprExportService {
 		if (u.getCategorieVendeur() != null) {
 			m.put("categorieVendeur", u.getCategorieVendeur().getLibtype());
 		}
+		if (u.getRole() != null && RoleNames.VENDEUR.equalsIgnoreCase(u.getRole().getLibrole())) {
+			m.put("vendeurInternational", u.isVendeurInternational());
+		}
 		if (u.getTypeEnginLivreur() != null) {
 			m.put("typeEnginLivreur", u.getTypeEnginLivreur().name());
 		}

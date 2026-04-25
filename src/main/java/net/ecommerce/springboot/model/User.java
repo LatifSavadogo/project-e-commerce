@@ -63,6 +63,16 @@ public class User {
 	@JoinColumn(name = "idtype_vendeur", nullable = true)
 	private TypeArticle categorieVendeur;
 
+	/** Vendeur dont les annonces apparaissent sur le marché international (catalogue filtré). */
+	@Column(name = "vendeur_international", nullable = false)
+	private boolean vendeurInternational;
+
+	/**
+	 * Badge « vendeur certifié » : date de fin d’abonnement (forfait PayDunya). Null = non certifié ou expiré.
+	 */
+	@Column(name = "vendeur_certifie_jusqua")
+	private LocalDateTime vendeurCertifieJusqua;
+
 	/** Moto ou véhicule : renseigné pour les comptes livreur (profil par défaut). */
 	@Enumerated(EnumType.STRING)
 	@Column(name = "type_engin_livreur", length = 16)
@@ -200,6 +210,22 @@ public class User {
 
 	public void setTypeEnginLivreur(TypeEnginLivreur typeEnginLivreur) {
 		this.typeEnginLivreur = typeEnginLivreur;
+	}
+
+	public boolean isVendeurInternational() {
+		return vendeurInternational;
+	}
+
+	public void setVendeurInternational(boolean vendeurInternational) {
+		this.vendeurInternational = vendeurInternational;
+	}
+
+	public LocalDateTime getVendeurCertifieJusqua() {
+		return vendeurCertifieJusqua;
+	}
+
+	public void setVendeurCertifieJusqua(LocalDateTime vendeurCertifieJusqua) {
+		this.vendeurCertifieJusqua = vendeurCertifieJusqua;
 	}
     
     public String getUserupdate() {

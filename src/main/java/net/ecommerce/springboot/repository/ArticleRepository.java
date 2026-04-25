@@ -12,6 +12,8 @@ public interface ArticleRepository extends JpaRepository<Article, Integer> {
 
 	List<Article> findByBlockedIsFalseOrderByDateupdateDesc();
 
+	List<Article> findByBlockedIsFalseAndVendeur_VendeurInternationalIsTrueOrderByDateupdateDesc();
+
 	List<Article> findAllByOrderByDateupdateDesc();
 
 	List<Article> findByVendeur_IduserOrderByDateupdateDesc(Integer idVendeur);

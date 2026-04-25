@@ -65,7 +65,8 @@ public class RoleUpgradeService {
 
 	@Transactional
 	public RoleUpgradeRequest submit(User acheteur, String roleDemande, MultipartFile cnibFile, MultipartFile photoFile,
-			Double latitude, Double longitude, Integer idtypeVendeur, String typeEnginLivreurRaw) throws IOException {
+			Double latitude, Double longitude, Integer idtypeVendeur, String typeEnginLivreurRaw, boolean vendeurInternational)
+			throws IOException {
 		if (acheteur.getRole() == null || !RoleNames.ACHETEUR.equalsIgnoreCase(acheteur.getRole().getLibrole())) {
 			throw new IllegalStateException("Seuls les comptes acheteur peuvent demander une mise à niveau.");
 		}
@@ -105,6 +106,7 @@ public class RoleUpgradeService {
 		req.setLatitude(latitude);
 		req.setLongitude(longitude);
 		req.setIdtypeVendeur(RoleNames.VENDEUR.equals(rd) ? idtypeVendeur : null);
+		req.setVendeurInternational(RoleNames.VENDEUR.equals(rd) && vendeurInternational);
 		if (RoleNames.LIVREUR.equals(rd)) {
 			req.setTypeEnginLivreur(LivraisonService.parseTypeEngin(typeEnginLivreurRaw));
 		}
@@ -217,9 +219,11 @@ public class RoleUpgradeService {
 					.orElseThrow(() -> new IllegalArgumentException("Type d'article introuvable."));
 			user.setCategorieVendeur(cat);
 			user.setTypeEnginLivreur(null);
+			user.setVendeurInternational(req.isVendeurInternational());
 		} else if (RoleNames.LIVREUR.equalsIgnoreCase(req.getRoleDemande())) {
 			user.setCategorieVendeur(null);
 			user.setTypeEnginLivreur(req.getTypeEnginLivreur());
+			user.setVendeurInternational(false);
 		}
 		user.setUserupdate(admin != null ? admin.getEmail() : "admin");
 		user.setDateupdate(LocalDateTime.now());

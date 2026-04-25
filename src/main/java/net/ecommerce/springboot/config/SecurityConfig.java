@@ -120,6 +120,9 @@ public class SecurityConfig {
 		auth.requestMatchers(HttpMethod.GET, "/api/v1/familleArticles", "/api/v1/familleArticles/*").permitAll();
 		auth.requestMatchers(HttpMethod.GET, "/api/v1/typeArticles", "/api/v1/typeArticles/*").permitAll();
 
+		auth.requestMatchers(HttpMethod.GET, "/api/v1/vendors/*/rating").permitAll();
+		auth.requestMatchers(HttpMethod.POST, "/api/v1/paydunya/ipn").permitAll();
+
 		auth.anyRequest().authenticated();
 	}
 }
