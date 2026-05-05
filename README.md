@@ -56,3 +56,25 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## E-commerce Migration Workspace
+
+This directory is a dedicated Laravel migration workspace for `project-e-commerce-back` and does not modify the original Spring Boot backend.
+
+### Implemented migration baseline
+
+- Session + CSRF API contract foundation (`/api/auth/*` and `/api/v1/*`).
+- Legacy schema-oriented Eloquent models for core entities.
+- API route coverage for frontend-consumed endpoints (P0/P1/P2 contract surface).
+- Security middleware equivalents for session version checks, seller contract checks, and audit logging.
+- GeniusPay webhook signature validation with idempotency persistence (`WebhookEvent`).
+- API contract matrix in `docs/api-contract-matrix.md`.
+
+### Runtime requirements
+
+Install PHP + Composer locally before running commands:
+
+- `composer install`
+- `php artisan key:generate`
+- `php artisan migrate`
+- `php artisan test`
